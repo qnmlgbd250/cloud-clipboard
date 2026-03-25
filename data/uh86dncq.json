@@ -1,0 +1,14 @@
+{
+  "room": {
+    "created_at": "2026-03-23T14:35:27.652309+00:00",
+    "last_activity_at": "2026-03-23T14:35:27.652309+00:00",
+    "last_write_at": "2026-03-23T14:35:27.652309+00:00"
+  },
+  "items": [
+    {
+      "id": "702000aa",
+      "content": "https://github.com/zhongyang219/TrafficMonitor/releases",
+      "created_at": "2026-03-23T14:35:27.652309+00:00"
+    }
+  ]
+}

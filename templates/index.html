@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>云剪贴板</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+</head>
+<body>
+  <div id="app">
+    <header class="header">
+      <div class="brand">
+        <span class="logo">📋</span>
+        <h1>云剪贴板</h1>
+      </div>
+      <div class="header-tools">
+        <button class="room-chip" id="roomBadge" type="button" title="点击复制房间号"></button>
+        <button class="icon-btn new-room-btn" id="btnNewRoom" type="button" title="新建房间" aria-label="新建房间">+</button>
+      </div>
+    </header>
+
+    <section class="share-section">
+      <div class="share-card">
+        <div class="share-copy">
+          <p class="share-label">
+            扫码访问当前房间
+            <span class="share-note">（内容保留 20 天，房间 20 天未使用自动销毁）</span>
+          </p>
+          <p class="share-hint">直接扫码，或复制链接到另一台设备，马上进入同一个房间。</p>
+          <p class="qr-url" id="qrUrl"></p>
+          <button class="btn btn-ghost btn-sm btn-copy-url" id="btnCopyUrl" type="button">复制链接</button>
+        </div>
+        <div id="qrContainer" aria-label="当前房间二维码"></div>
+      </div>
+    </section>
+
+    <section class="input-section" id="inputSection">
+      <textarea
+        id="inputArea"
+        placeholder="在这里粘贴内容，停止输入约 1 秒后会自动发送..."
+        rows="6"
+        autofocus
+      ></textarea>
+    </section>
+
+    <div class="toolbar">
+      <span class="item-count" id="itemCount">0 条记录</span>
+      <div class="toolbar-right">
+        <button class="btn btn-ghost btn-sm" id="btnRefresh" type="button">刷新</button>
+        <button class="btn btn-ghost btn-sm btn-danger" id="btnClear" type="button">清空</button>
+      </div>
+    </div>
+
+    <main class="item-list" id="itemList">
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">📝</div>
+        <p>还没有内容</p>
+        <p class="empty-hint">先把内容贴进来，再在其他设备上打开同一个房间。</p>
+      </div>
+    </main>
+
+    <div class="modal-overlay" id="clearConfirmModal" aria-hidden="true">
+      <div class="modal modal-confirm" role="dialog" aria-modal="true" aria-labelledby="clearConfirmTitle">
+        <div class="modal-header modal-header-danger">
+          <div class="modal-hero">
+            <div class="modal-hero-icon">!</div>
+            <div class="modal-hero-copy">
+              <h3 id="clearConfirmTitle">清空当前房间</h3>
+            </div>
+          </div>
+          <button class="icon-btn modal-close-btn" id="btnCloseClearConfirm" type="button" title="关闭">×</button>
+        </div>
+        <div class="modal-body modal-body-confirm">
+          <div class="confirm-summary">
+            <span class="confirm-summary-label">即将删除</span>
+            <strong class="confirm-summary-value" id="clearConfirmCount">0 条记录</strong>
+          </div>
+          <div class="modal-actions">
+            <button class="btn btn-danger-solid btn-block" id="btnConfirmClear" type="button" data-modal-focus>确认清空</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="newRoomModal" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="newRoomTitle">
+        <div class="modal-header">
+          <div class="modal-hero">
+            <div class="modal-hero-icon modal-hero-icon-accent">#</div>
+            <div class="modal-hero-copy">
+              <h3 id="newRoomTitle">新建房间</h3>
+            </div>
+          </div>
+          <button class="icon-btn modal-close-btn" id="btnCloseNewRoomModal" type="button" title="关闭">×</button>
+        </div>
+        <div class="modal-body modal-body-room">
+          <div class="room-create-options">
+            <button class="room-choice-btn" id="btnCreateRandomRoom" type="button">
+              <strong>随机生成房间号</strong>
+              <span>系统立即创建一个新的随机房间并跳转</span>
+            </button>
+          </div>
+
+          <div class="room-custom-group">
+            <label class="room-custom-label" for="newRoomCustomInput">自定义房间号</label>
+            <input
+              class="room-custom-input"
+              id="newRoomCustomInput"
+              type="text"
+              inputmode="text"
+              autocomplete="off"
+              maxlength="64"
+              placeholder="例如：team-20260324"
+              data-modal-focus
+            >
+            <p class="room-custom-hint">支持字母、数字、下划线和短横线，最长 64 位。</p>
+            <button class="btn btn-primary btn-block" id="btnCreateCustomRoom" type="button">进入自定义房间</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+  </div>
+
+  <script src="/static/app.js" data-room="{{ room_id }}"></script>
+</body>
+</html>
