@@ -28,9 +28,9 @@
   --page-gradient: radial-gradient(circle at top left, rgba(125, 187, 255, 0.26), transparent 34%),
     radial-gradient(circle at top right, rgba(98, 208, 255, 0.18), transparent 30%),
     linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
-  --header-bg: rgba(244, 248, 255, 0.52);
-  --header-border: rgba(22, 119, 255, 0.06);
-  --header-shadow: 0 8px 24px rgba(18, 39, 90, 0.04);
+  --header-bg: rgba(244, 248, 255, 0.18);
+  --header-border: rgba(22, 119, 255, 0.05);
+  --header-shadow: 0 6px 18px rgba(18, 39, 90, 0.02);
   --share-bg: linear-gradient(180deg, rgba(246, 250, 255, 0.96), rgba(241, 247, 255, 0.98));
   --share-ring: rgba(22, 119, 255, 0.08);
   --share-glow: radial-gradient(circle at top right, rgba(22, 119, 255, 0.12), transparent 42%);
@@ -81,11 +81,12 @@ body.modal-open {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 18px 0 10px;
+  padding: 18px 18px 10px;
   background: var(--header-bg);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--header-border);
+  border: 1px solid var(--header-border);
+  border-radius: 0 0 18px 18px;
   box-shadow: var(--header-shadow);
 }
 
@@ -94,6 +95,12 @@ body.modal-open {
   align-items: center;
   gap: 10px;
   min-width: 0;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  -webkit-filter: none !important;
+  forced-color-adjust: none;
 }
 
 .logo {
@@ -110,9 +117,25 @@ body.modal-open {
 }
 
 .brand h1 {
+  display: block;
+  margin: 0;
+  padding: 0;
   font-size: 1.2rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--text);
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none;
+  filter: none !important;
+  -webkit-filter: none !important;
+  mix-blend-mode: normal;
+  isolation: isolate;
+  forced-color-adjust: none;
 }
 
 .header-tools {
@@ -998,9 +1021,9 @@ body::-webkit-scrollbar-corner,
     --page-gradient: radial-gradient(circle at top left, rgba(32, 98, 204, 0.24), transparent 34%),
       radial-gradient(circle at top right, rgba(20, 143, 184, 0.16), transparent 28%),
       linear-gradient(180deg, #0f1729 0%, #0b1220 100%);
-    --header-bg: rgba(11, 18, 32, 0.5);
-    --header-border: rgba(99, 164, 255, 0.08);
-    --header-shadow: 0 8px 24px rgba(2, 6, 23, 0.14);
+    --header-bg: rgba(11, 18, 32, 0.24);
+    --header-border: rgba(99, 164, 255, 0.07);
+    --header-shadow: 0 8px 20px rgba(2, 6, 23, 0.08);
     --share-bg: linear-gradient(180deg, rgba(21, 35, 59, 0.96), rgba(13, 22, 38, 0.98));
     --share-ring: rgba(99, 164, 255, 0.12);
     --share-glow: radial-gradient(circle at top right, rgba(99, 164, 255, 0.16), transparent 42%);
