@@ -10,6 +10,7 @@ const STREAM_RETRY_DELAY = 2000;
 const MOBILE_PREVIEW_LIMIT = 56;
 const DESKTOP_PREVIEW_LIMIT = 150;
 const AUTO_SEND_DELAY = 1000;
+const FOREGROUND_SYNC_COOLDOWN_MS = 800;
 const CUSTOM_ROOM_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const compactPreviewQuery = window.matchMedia("(max-width: 560px)");
 
@@ -52,6 +53,7 @@ let autoSendTimer = null;
 let pendingAutoSend = false;
 let currentItems = [];
 let isCompactPreview = compactPreviewQuery.matches;
+let lastForegroundSyncAt = 0;
 
 roomBadge.textContent = ROOM_ID;
 roomBadge.title = `点击复制房间号：${ROOM_ID}`;
@@ -140,19 +142,16 @@ function bindEvents() {
   document.addEventListener("keydown", handleGlobalKeydown);
 
   window.addEventListener("pageshow", () => {
-    loadItems({ forceFresh: true });
-    ensureRealtimeSync();
+    scheduleForegroundSync();
   });
 
   window.addEventListener("focus", () => {
-    loadItems({ forceFresh: true });
-    ensureRealtimeSync();
+    scheduleForegroundSync();
   });
 
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
-      loadItems({ forceFresh: true });
-      ensureRealtimeSync();
+      scheduleForegroundSync();
     }
   });
 
@@ -271,6 +270,40 @@ function queueLoad(options = {}) {
   };
 }
 
+function areItemsEqual(prevItems, nextItems) {
+  if (!Array.isArray(prevItems) || !Array.isArray(nextItems)) {
+    return false;
+  }
+  if (prevItems.length !== nextItems.length) {
+    return false;
+  }
+
+  for (let i = 0; i < prevItems.length; i += 1) {
+    const prev = prevItems[i] || {};
+    const next = nextItems[i] || {};
+    if (
+      prev.id !== next.id ||
+      prev.content !== next.content ||
+      prev.created_at !== next.created_at
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function scheduleForegroundSync() {
+  const now = Date.now();
+  if (now - lastForegroundSyncAt < FOREGROUND_SYNC_COOLDOWN_MS) {
+    return;
+  }
+
+  lastForegroundSyncAt = now;
+  loadItems({ forceFresh: true });
+  ensureRealtimeSync();
+}
+
 async function loadItems(options = {}) {
   const { manual = false, forceFresh = false } = options;
 
@@ -294,8 +327,11 @@ async function loadItems(options = {}) {
       throw new Error("加载失败");
     }
 
-    const items = await response.json();
-    renderItems(Array.isArray(items) ? items : []);
+    const payload = await response.json();
+    const items = Array.isArray(payload) ? payload : [];
+    if (!areItemsEqual(currentItems, items)) {
+      renderItems(items);
+    }
   } catch (error) {
     if (manual) {
       showToast("加载失败", "error");
