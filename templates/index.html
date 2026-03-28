@@ -4,14 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>云剪贴板</title>
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f4f8ff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
   <link rel="stylesheet" href="/static/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+  <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+  <link rel="apple-touch-icon" href="/static/icon.svg">
 </head>
 <body>
   <div id="app">
     <header class="header">
       <div class="brand">
-        <span class="logo">📋</span>
+        <span class="logo" aria-hidden="true"></span>
         <h1>云剪贴板</h1>
       </div>
       <div class="header-tools">
@@ -25,7 +29,7 @@
         <div class="share-copy">
           <p class="share-label">
             扫码访问当前房间
-            <span class="share-note">（内容保留 20 天，房间 20 天未使用自动销毁）</span>
+            <span class="share-note">（内容保留 20 天，房间 20 天未使用自动清理）</span>
           </p>
           <p class="share-hint">直接扫码，或复制链接到另一台设备，马上进入同一个房间。</p>
           <p class="qr-url" id="qrUrl"></p>
@@ -54,7 +58,7 @@
 
     <main class="item-list" id="itemList">
       <div class="empty-state" id="emptyState">
-        <div class="empty-icon">📝</div>
+        <div class="empty-icon">⌘</div>
         <p>还没有内容</p>
         <p class="empty-hint">先把内容贴进来，再在其他设备上打开同一个房间。</p>
       </div>
