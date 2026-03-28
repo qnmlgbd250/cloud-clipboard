@@ -54,6 +54,7 @@ let pendingAutoSend = false;
 let currentItems = [];
 let isCompactPreview = compactPreviewQuery.matches;
 let lastForegroundSyncAt = 0;
+let lastSuccessfulLoadAt = 0;
 
 roomBadge.textContent = ROOM_ID;
 roomBadge.title = `点击复制房间号：${ROOM_ID}`;
@@ -293,6 +294,16 @@ function areItemsEqual(prevItems, nextItems) {
   return true;
 }
 
+function applyItems(items) {
+  const nextItems = Array.isArray(items) ? items : [];
+  if (areItemsEqual(currentItems, nextItems)) {
+    return false;
+  }
+
+  renderItems(nextItems);
+  return true;
+}
+
 function scheduleForegroundSync() {
   const now = Date.now();
   if (now - lastForegroundSyncAt < FOREGROUND_SYNC_COOLDOWN_MS) {
@@ -329,9 +340,8 @@ async function loadItems(options = {}) {
 
     const payload = await response.json();
     const items = Array.isArray(payload) ? payload : [];
-    if (!areItemsEqual(currentItems, items)) {
-      renderItems(items);
-    }
+    lastSuccessfulLoadAt = Date.now();
+    applyItems(items);
   } catch (error) {
     if (manual) {
       showToast("加载失败", "error");
@@ -394,8 +404,11 @@ async function sendItem({ successMessage = "已同步" } = {}) {
     }
 
     showToast(successMessage, "success");
-
-    await loadItems({ forceFresh: true });
+    if (payload && typeof payload === "object") {
+      applyItems([payload, ...currentItems.filter((item) => item.id !== payload.id)]);
+    } else {
+      queueLoad({ forceFresh: true });
+    }
     return true;
   } catch (error) {
     showToast(error.message || "发送失败", "error");
@@ -444,7 +457,7 @@ async function deleteItem(id, itemEl) {
     }
 
     showToast("已删除", "success");
-    await loadItems({ forceFresh: true });
+    applyItems(currentItems.filter((item) => item.id !== id));
   } catch (error) {
     showToast("删除失败", "error");
   }
@@ -487,7 +500,7 @@ async function confirmClearItems() {
 
     setModalOpen(clearConfirmModal, false);
     showToast("已清空", "success");
-    await loadItems({ forceFresh: true });
+    applyItems([]);
   } catch (error) {
     showToast("清空失败", "error");
   } finally {
@@ -497,7 +510,7 @@ async function confirmClearItems() {
 }
 
 function getCurrentItemCount() {
-  return itemList.querySelectorAll(".clip-item").length;
+  return currentItems.length;
 }
 
 function getPreviewLimit() {
@@ -530,19 +543,20 @@ function syncClearConfirmState(count = getCurrentItemCount()) {
 
 function renderItems(items) {
   currentItems = Array.isArray(items) ? items.slice() : [];
-  itemList.querySelectorAll(".clip-item").forEach((itemEl) => itemEl.remove());
-
   itemCount.textContent = `${currentItems.length} 条记录`;
-  emptyState.style.display = currentItems.length === 0 ? "" : "none";
+  btnClear.disabled = currentItems.length === 0;
 
   if (currentItems.length === 0) {
+    emptyState.style.display = "";
+    itemList.replaceChildren(emptyState);
     syncClearConfirmState(0);
     return;
   }
 
+  emptyState.style.display = "none";
   const fragment = document.createDocumentFragment();
   currentItems.forEach((item) => fragment.appendChild(createItemElement(item)));
-  itemList.appendChild(fragment);
+  itemList.replaceChildren(fragment);
   syncClearConfirmState(currentItems.length);
 }
 
@@ -793,7 +807,9 @@ function connectRealtimeStream() {
   realtimeSource = new EventSource(buildApiUrl("/api/stream"));
   realtimeSource.addEventListener("ready", () => {
     stopPolling();
-    loadItems({ forceFresh: true });
+    if (!lastSuccessfulLoadAt || Date.now() - lastSuccessfulLoadAt > POLL_INTERVAL) {
+      loadItems({ forceFresh: true });
+    }
   });
   realtimeSource.addEventListener("items_changed", () => {
     loadItems({ forceFresh: true });

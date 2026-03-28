@@ -137,14 +137,14 @@ def _default_room_state(now: datetime | None = None) -> dict:
     }
 
 
-def _normalize_item(raw_item: object) -> tuple[dict | None, bool]:
+def _normalize_item(raw_item: object) -> tuple[dict | None, datetime | None, bool]:
     if not isinstance(raw_item, dict):
-        return None, True
+        return None, None, True
 
     content = str(raw_item.get("content") or "").strip()
     created_at = _parse_datetime(raw_item.get("created_at"))
     if not content or created_at is None:
-        return None, True
+        return None, None, True
 
     item_id = str(raw_item.get("id") or uuid.uuid4().hex[:8])[:64]
     normalized = {
@@ -157,24 +157,22 @@ def _normalize_item(raw_item: object) -> tuple[dict | None, bool]:
         or raw_item.get("content") != normalized["content"]
         or raw_item.get("created_at") != normalized["created_at"]
     )
-    return normalized, changed
+    return normalized, created_at, changed
 
 
-def _clean_expired_items(items: list[dict], now: datetime | None = None) -> list[dict]:
+def _clean_expired_items(
+    items_with_datetimes: list[tuple[datetime, dict]],
+    now: datetime | None = None,
+) -> list[tuple[datetime, dict]]:
     if CONTENT_TTL_HOURS <= 0:
-        return items
+        return items_with_datetimes
 
     cutoff = (now or _now_utc()) - timedelta(hours=CONTENT_TTL_HOURS)
-    cleaned_items: list[dict] = []
-
-    for item in items:
-        created_at = _parse_datetime(item.get("created_at"))
-        if created_at is None:
-            continue
-        if created_at > cutoff:
-            cleaned_items.append(item)
-
-    return cleaned_items
+    return [
+        (created_at, item)
+        for created_at, item in items_with_datetimes
+        if created_at > cutoff
+    ]
 
 
 def _normalize_room_state(raw_data: object) -> tuple[dict, bool]:
@@ -199,23 +197,26 @@ def _normalize_room_state(raw_data: object) -> tuple[dict, bool]:
     else:
         changed = True
 
-    items: list[dict] = []
+    items_with_datetimes: list[tuple[datetime, dict]] = []
     for raw_item in raw_items:
-        normalized_item, item_changed = _normalize_item(raw_item)
+        normalized_item, created_at, item_changed = _normalize_item(raw_item)
         changed = changed or item_changed
-        if normalized_item is not None:
-            items.append(normalized_item)
+        if normalized_item is not None and created_at is not None:
+            items_with_datetimes.append((created_at, normalized_item))
 
-    cleaned_items = _clean_expired_items(items, now)
-    if len(cleaned_items) != len(items):
+    cleaned_items = _clean_expired_items(items_with_datetimes, now)
+    if len(cleaned_items) != len(items_with_datetimes):
         changed = True
-    items = cleaned_items
+    items_with_datetimes = cleaned_items
 
-    item_datetimes = [
-        _parse_datetime(item.get("created_at"))
-        for item in items
-        if _parse_datetime(item.get("created_at")) is not None
-    ]
+    if len(items_with_datetimes) > 1:
+        sorted_items = sorted(items_with_datetimes, key=lambda entry: entry[0], reverse=True)
+        if sorted_items != items_with_datetimes:
+            changed = True
+        items_with_datetimes = sorted_items
+
+    items = [item for _, item in items_with_datetimes]
+    item_datetimes = [created_at for created_at, _ in items_with_datetimes]
     earliest_item = min(item_datetimes) if item_datetimes else None
     latest_item = max(item_datetimes) if item_datetimes else None
 
@@ -305,8 +306,8 @@ def _touch_room_write(state: dict, now: datetime | None = None) -> None:
     room_meta["last_write_at"] = ts
 
 
-def _save_room_state(room: str, state: dict) -> bool:
-    normalized_state, _ = _normalize_room_state(state)
+def _save_room_state(room: str, state: dict, *, normalized: bool = False) -> bool:
+    normalized_state = state if normalized else _normalize_room_state(state)[0]
     now = _now_utc()
 
     if _room_should_expire(normalized_state, now):
@@ -323,6 +324,31 @@ def _save_room_state(room: str, state: dict) -> bool:
             os.unlink(tmp_path)
         raise
     return True
+
+
+def _load_active_room_state(
+    room: str,
+    *,
+    now: datetime | None = None,
+    touch_activity: bool = False,
+) -> tuple[dict, bool]:
+    room_lock = _get_room_lock(room)
+    current_time = now or _now_utc()
+
+    with room_lock:
+        state, exists, changed = _load_room_state(room)
+
+        if exists and _room_should_expire(state, current_time):
+            _delete_room_file(room)
+            return _default_room_state(current_time), False
+
+        if exists and touch_activity:
+            changed = _touch_room_activity(state, current_time) or changed
+
+        if exists and changed:
+            _save_room_state(room, state, normalized=True)
+
+        return state, exists
 
 
 def _get_room_lock(room: str) -> Lock:
@@ -384,7 +410,7 @@ def _cleanup_storage(*, force: bool = False) -> None:
                     continue
 
                 if changed:
-                    _save_room_state(room, state)
+                    _save_room_state(room, state, normalized=True)
 
         LAST_STORAGE_CLEANUP_AT = now_monotonic
 
@@ -506,23 +532,8 @@ def get_items():
     if room is None:
         return _json_error("invalid room", 400)
 
-    room_lock = _get_room_lock(room)
-    with room_lock:
-        state, exists, changed = _load_room_state(room)
-        now = _now_utc()
-
-        if exists and _room_should_expire(state, now):
-            _delete_room_file(room)
-            state = _default_room_state(now)
-            exists = False
-        elif exists:
-            changed = _touch_room_activity(state, now) or changed
-            if changed:
-                _save_room_state(room, state)
-
-        items = list(state.get("items", []))
-
-    items.sort(key=lambda item: item.get("created_at", ""), reverse=True)
+    state, _ = _load_active_room_state(room, touch_activity=True)
+    items = list(state.get("items", []))
     response = jsonify(items)
     return _add_no_store_headers(response)
 
@@ -564,10 +575,10 @@ def add_item():
             "content": content,
             "created_at": now.isoformat(),
         }
-        items.append(item)
+        items.insert(0, item)
         state["items"] = items
         _touch_room_write(state, now)
-        _save_room_state(room, state)
+        _save_room_state(room, state, normalized=True)
 
     _broadcast_room_update(room)
     response = jsonify(item)
@@ -581,6 +592,7 @@ def delete_item(item_id: str):
     if room is None:
         return _json_error("invalid room", 400)
 
+    changed = False
     room_lock = _get_room_lock(room)
     with room_lock:
         state, exists, _ = _load_room_state(room)
@@ -590,11 +602,13 @@ def delete_item(item_id: str):
 
         items = [item for item in state.get("items", []) if item.get("id") != item_id]
         if len(items) != len(state.get("items", [])):
+            changed = True
             state["items"] = items
             _touch_room_write(state)
-            _save_room_state(room, state)
+            _save_room_state(room, state, normalized=True)
 
-    _broadcast_room_update(room)
+    if changed:
+        _broadcast_room_update(room)
     response = jsonify({"ok": True})
     return _add_no_store_headers(response)
 
@@ -605,15 +619,18 @@ def clear_items():
     if room is None:
         return _json_error("invalid room", 400)
 
+    changed = False
     room_lock = _get_room_lock(room)
     with room_lock:
         state, exists, _ = _load_room_state(room)
-        if exists:
+        if exists and state.get("items"):
+            changed = True
             state["items"] = []
             _touch_room_write(state)
-            _save_room_state(room, state)
+            _save_room_state(room, state, normalized=True)
 
-    _broadcast_room_update(room)
+    if changed:
+        _broadcast_room_update(room)
     response = jsonify({"ok": True})
     return _add_no_store_headers(response)
 
@@ -624,16 +641,7 @@ def stream_items():
     if room is None:
         return _json_error("invalid room", 400)
 
-    room_lock = _get_room_lock(room)
-    with room_lock:
-        state, exists, changed = _load_room_state(room)
-        now = _now_utc()
-        if exists and _room_should_expire(state, now):
-            _delete_room_file(room)
-        elif exists:
-            changed = _touch_room_activity(state, now) or changed
-            if changed:
-                _save_room_state(room, state)
+    _load_active_room_state(room, touch_activity=True)
 
     subscriber = _register_subscriber(room)
 
