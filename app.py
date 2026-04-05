@@ -18,7 +18,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from queue import Empty, Full, Queue
-from threading import Lock
+from threading import Lock, Thread
 
 import qrcode
 from flask import (
@@ -35,19 +35,29 @@ from flask import (
 
 app = Flask(__name__)
 
+# ─── Configuration ───────────────────────────────────────────────────
 DATA_DIR = Path(__file__).resolve().parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
-CONTENT_TTL_HOURS = 24 * 20
-ROOM_TTL_HOURS = 24 * 20
-EMPTY_ROOM_TTL_HOURS = 24
-MAX_CONTENT_LENGTH = 50_000
-MAX_ITEMS_PER_ROOM = 500
-MAX_ROOMS = 2_000
-WRITE_RATE_LIMIT = 40
-WRITE_RATE_WINDOW_SECONDS = 60
-ROOM_ACTIVITY_TOUCH_INTERVAL_SECONDS = 300
-STORAGE_CLEANUP_INTERVAL_SECONDS = 300
+CONTENT_TTL_HOURS = int(os.environ.get("CONTENT_TTL_HOURS", "480"))
+ROOM_TTL_HOURS = int(os.environ.get("ROOM_TTL_HOURS", "480"))
+EMPTY_ROOM_TTL_HOURS = int(os.environ.get("EMPTY_ROOM_TTL_HOURS", "24"))
+MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", "50000"))
+MAX_ITEMS_PER_ROOM = int(os.environ.get("MAX_ITEMS_PER_ROOM", "500"))
+MAX_ROOMS = int(os.environ.get("MAX_ROOMS", "2000"))
+WRITE_RATE_LIMIT = int(os.environ.get("WRITE_RATE_LIMIT", "40"))
+WRITE_RATE_WINDOW_SECONDS = int(os.environ.get("WRITE_RATE_WINDOW_SECONDS", "60"))
+ROOM_ACTIVITY_TOUCH_INTERVAL_SECONDS = int(
+    os.environ.get("ROOM_ACTIVITY_TOUCH_INTERVAL_SECONDS", "300")
+)
+STORAGE_CLEANUP_INTERVAL_SECONDS = int(
+    os.environ.get("STORAGE_CLEANUP_INTERVAL_SECONDS", "300")
+)
+MAX_SUBSCRIBERS_PER_ROOM = int(os.environ.get("MAX_SUBSCRIBERS_PER_ROOM", "100"))
+
+# ─── In-memory room cache ────────────────────────────────────────────
+ROOM_CACHE: dict[str, dict] = {}
+ROOM_CACHE_LOCK = Lock()
 
 ROOM_SUBSCRIBERS: dict[str, set[Queue]] = defaultdict(set)
 ROOM_SUBSCRIBERS_LOCK = Lock()
@@ -247,6 +257,15 @@ def _normalize_room_state(raw_data: object) -> tuple[dict, bool]:
 
 
 def _load_room_state(room: str) -> tuple[dict, bool, bool]:
+    """Load room state from cache first, then disk.
+
+    Returns (state, exists, changed).
+    """
+    with ROOM_CACHE_LOCK:
+        cached = ROOM_CACHE.get(room)
+    if cached is not None:
+        return cached, True, False
+
     path = _data_path(room)
     if not path.exists():
         return _default_room_state(), False, False
@@ -262,6 +281,9 @@ def _load_room_state(room: str) -> tuple[dict, bool, bool]:
         return _default_room_state(), False, True
 
     state, changed = _normalize_room_state(raw_data)
+    if not changed:
+        with ROOM_CACHE_LOCK:
+            ROOM_CACHE[room] = state
     return state, True, changed
 
 
@@ -283,6 +305,8 @@ def _delete_room_file(room: str) -> None:
         _data_path(room).unlink()
     except OSError:
         pass
+    with ROOM_STATE_LOCKS_LOCK:
+        ROOM_STATE_LOCKS.pop(room, None)
 
 
 def _touch_room_activity(state: dict, now: datetime | None = None, *, force: bool = False) -> bool:
@@ -312,6 +336,8 @@ def _save_room_state(room: str, state: dict, *, normalized: bool = False) -> boo
 
     if _room_should_expire(normalized_state, now):
         _delete_room_file(room)
+        with ROOM_CACHE_LOCK:
+            ROOM_CACHE.pop(room, None)
         return False
 
     fd, tmp_path = tempfile.mkstemp(dir=DATA_DIR, suffix=".tmp")
@@ -323,6 +349,9 @@ def _save_room_state(room: str, state: dict, *, normalized: bool = False) -> boo
         if os.path.exists(tmp_path):
             os.unlink(tmp_path)
         raise
+
+    with ROOM_CACHE_LOCK:
+        ROOM_CACHE[room] = normalized_state
     return True
 
 
@@ -412,10 +441,25 @@ def _cleanup_storage(*, force: bool = False) -> None:
                 if changed:
                     _save_room_state(room, state, normalized=True)
 
+        # Reap orphaned locks and cache entries
+        with ROOM_STATE_LOCKS_LOCK:
+            for r in list(ROOM_STATE_LOCKS.keys()):
+                if not _data_path(r).exists():
+                    ROOM_STATE_LOCKS.pop(r, None)
+
+        with ROOM_CACHE_LOCK:
+            for r in list(ROOM_CACHE.keys()):
+                if not _data_path(r).exists():
+                    ROOM_CACHE.pop(r, None)
+
         LAST_STORAGE_CLEANUP_AT = now_monotonic
 
 
 def _room_count() -> int:
+    with ROOM_CACHE_LOCK:
+        cache_count = len(ROOM_CACHE)
+    if cache_count > 0:
+        return cache_count
     return sum(1 for path in DATA_DIR.glob("*.json") if _is_valid_room_name(path.stem))
 
 
@@ -450,6 +494,8 @@ def _add_no_store_headers(response: Response) -> Response:
 def _register_subscriber(room: str) -> Queue:
     subscriber: Queue = Queue(maxsize=1)
     with ROOM_SUBSCRIBERS_LOCK:
+        if len(ROOM_SUBSCRIBERS.get(room, ())) >= MAX_SUBSCRIBERS_PER_ROOM:
+            raise RateLimitError("连接数过多，请稍后再试")
         ROOM_SUBSCRIBERS[room].add(subscriber)
     return subscriber
 
@@ -494,9 +540,21 @@ def _sse_message(event: str, payload: dict) -> str:
 
 @app.before_request
 def before_request_housekeeping() -> None:
-    _cleanup_storage()
     if request.endpoint in {"add_item", "delete_item", "clear_items"}:
         _enforce_write_rate_limit()
+
+
+def _start_background_cleanup() -> None:
+    """Run storage cleanup periodically in a background thread."""
+    def _loop():
+        while True:
+            time.sleep(STORAGE_CLEANUP_INTERVAL_SECONDS)
+            try:
+                _cleanup_storage(force=True)
+            except Exception:
+                pass
+
+    Thread(target=_loop, daemon=True).start()
 
 
 @app.errorhandler(RateLimitError)
@@ -692,4 +750,5 @@ def qr_code():
 
 
 if __name__ == "__main__":
+    _start_background_cleanup()
     app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)

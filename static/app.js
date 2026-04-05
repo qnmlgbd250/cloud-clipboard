@@ -554,10 +554,47 @@ function renderItems(items) {
   }
 
   emptyState.style.display = "none";
-  const fragment = document.createDocumentFragment();
-  currentItems.forEach((item) => fragment.appendChild(createItemElement(item)));
-  itemList.replaceChildren(fragment);
+  patchItems(itemList, currentItems);
   syncClearConfirmState(currentItems.length);
+}
+
+function patchItems(container, items) {
+  const existingNodes = new Map();
+  container.querySelectorAll(".clip-item").forEach((node) => {
+    existingNodes.set(node.dataset.id, node);
+  });
+
+  const seenIds = new Set();
+
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    seenIds.add(item.id);
+    const existing = existingNodes.get(item.id);
+    const refNode = container.children[i] || null;
+
+    if (existing) {
+      if (existing !== refNode) {
+        container.insertBefore(existing, refNode);
+      }
+      const contentEl = existing.querySelector(".clip-content:not(.collapsed)");
+      if (contentEl && contentEl.textContent !== item.content) {
+        contentEl.textContent = item.content;
+      }
+      const timeEl = existing.querySelector(".clip-time");
+      if (timeEl) {
+        timeEl.textContent = formatTime(item.created_at);
+      }
+    } else {
+      const newItem = createItemElement(item);
+      container.insertBefore(newItem, refNode);
+    }
+  }
+
+  existingNodes.forEach((node, id) => {
+    if (!seenIds.has(id)) {
+      node.remove();
+    }
+  });
 }
 
 function createItemElement(item) {
