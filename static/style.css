@@ -479,11 +479,16 @@ body.modal-open {
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 122, 255, 0.42) rgba(148, 163, 184, 0.12);
+  -webkit-overflow-scrolling: touch;
+}
+
+.clip-content:not(:hover) {
+  scrollbar-color: transparent transparent;
 }
 
 .clip-content.collapsed {
   max-height: none;
-  overflow: hidden;
+  overflow: visible;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
