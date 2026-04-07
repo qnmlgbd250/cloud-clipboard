@@ -25,7 +25,7 @@
 
 ### 手机端
 
-<img src="phone.png" alt="手机端" width="280">
+<img src="phone.jpg" alt="手机端" width="280">
 
 ### 网页端
 
