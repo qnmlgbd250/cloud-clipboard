@@ -138,6 +138,44 @@ cloud-clipboard/
 - Nginx 反向代理
 - 基础的访问日志
 
+## Docker 部署
+
+仓库现在已经自带：
+
+- `Dockerfile`
+- `docker-compose.yml`
+- `gunicorn.conf.py`
+
+和以前“容器启动时执行 `pip install`”不同，现在依赖会在 **镜像构建阶段** 安装，容器启动时只负责拉起 Gunicorn。
+
+### 本地或服务器命令行
+
+```bash
+docker compose build
+docker compose up -d
+```
+
+### 1Panel 使用建议
+
+- 编排目录直接选当前项目目录
+- 使用仓库里的 `docker-compose.yml`
+- 首次是 `build`，会联网安装一次依赖
+- 后续普通重启容器不会再次下载依赖
+- 只挂载 `./data:/app/data`，不要再把整个项目目录挂到 `/app`
+
+### 为什么这里默认是 `1 worker`
+
+这个项目的 SSE 房间订阅目前保存在进程内内存里。  
+如果 Gunicorn 开多个 worker，不同请求可能落到不同进程，实时广播会互相看不见，表现为“有时更新不及时”。
+
+所以当前配置采用：
+
+- `1` 个 worker
+- 较多 threads 处理 SSE 长连接
+- Gunicorn 负责生产环境运行
+
+如果以后把房间广播改成 Redis 这类共享通道，再考虑多 worker 会更合适。
+
 ## Roadmap
 
 - 图片、文件传输支持

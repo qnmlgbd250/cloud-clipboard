@@ -1,0 +1,13 @@
+.git
+.gitignore
+.idea
+.venv
+.flaskenv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+data/*.json
+phone.jpg
+web.png

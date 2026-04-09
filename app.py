@@ -68,6 +68,7 @@ RATE_LIMIT_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
 RATE_LIMIT_LOCK = Lock()
 STORAGE_CLEANUP_LOCK = Lock()
 LAST_STORAGE_CLEANUP_AT = 0.0
+BACKGROUND_CLEANUP_STARTED = False
 
 ROOM_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz"
 ROOM_NAME_LENGTH = 8
@@ -569,6 +570,13 @@ def before_request_housekeeping() -> None:
 
 def _start_background_cleanup() -> None:
     """Run storage cleanup periodically in a background thread."""
+    global BACKGROUND_CLEANUP_STARTED
+
+    if BACKGROUND_CLEANUP_STARTED:
+        return
+
+    BACKGROUND_CLEANUP_STARTED = True
+
     def _loop():
         while True:
             time.sleep(STORAGE_CLEANUP_INTERVAL_SECONDS)
@@ -578,6 +586,9 @@ def _start_background_cleanup() -> None:
                 pass
 
     Thread(target=_loop, daemon=True).start()
+
+
+_start_background_cleanup()
 
 
 @app.errorhandler(RateLimitError)
@@ -800,5 +811,4 @@ def qr_code():
 
 
 if __name__ == "__main__":
-    _start_background_cleanup()
     app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)

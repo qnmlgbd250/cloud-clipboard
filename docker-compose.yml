@@ -1,0 +1,27 @@
+services:
+  clipboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloud-clipboard
+    restart: unless-stopped
+    environment:
+      WEB_CONCURRENCY: "1"
+      GUNICORN_THREADS: "24"
+      GUNICORN_TIMEOUT: "120"
+      CONTENT_TTL_HOURS: "480"
+      ROOM_TTL_HOURS: "480"
+      EMPTY_ROOM_TTL_HOURS: "24"
+      MAX_CONTENT_LENGTH: "50000"
+      MAX_ITEMS_PER_ROOM: "500"
+      MAX_ITEMS_PAGE_SIZE: "100"
+      MAX_ROOMS: "2000"
+      WRITE_RATE_LIMIT: "40"
+      WRITE_RATE_WINDOW_SECONDS: "60"
+      ROOM_ACTIVITY_TOUCH_INTERVAL_SECONDS: "300"
+      STORAGE_CLEANUP_INTERVAL_SECONDS: "300"
+      MAX_SUBSCRIBERS_PER_ROOM: "100"
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data
