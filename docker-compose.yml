@@ -16,6 +16,8 @@ services:
       ROOM_TTL_HOURS: "480"
       EMPTY_ROOM_TTL_HOURS: "24"
       MAX_CONTENT_LENGTH: "50000"
+      MAX_FILE_SIZE_BYTES: "104857600"
+      MAX_FILES_PER_ROOM: "30"
       MAX_ITEMS_PER_ROOM: "500"
       MAX_ITEMS_PAGE_SIZE: "100"
       MAX_ROOMS: "2000"
@@ -28,3 +30,4 @@ services:
       - "5000:5000"
     volumes:
       - ./data:/app/data
+      - ./uploads:/app/uploads

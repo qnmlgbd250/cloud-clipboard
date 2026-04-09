@@ -27,19 +27,58 @@
     <section class="share-section">
       <div class="share-card">
         <div class="share-copy">
-          <p class="share-label">扫码进入房间，或点击房间号复制链接（20 天有效）</p>
+          <p class="share-label">扫码进入房间，或点击顶部房间号复制链接</p>
+          <p class="share-hint">文本和文件都会在当前房间内保留 20 天，适合临时跨设备传输。</p>
         </div>
         <div id="qrContainer" aria-label="当前房间二维码"></div>
       </div>
     </section>
 
     <section class="input-section" id="inputSection">
-      <textarea
-        id="inputArea"
-        placeholder="在这里粘贴内容，停止输入约 1 秒后会自动发送..."
-        rows="6"
-        autofocus
-      ></textarea>
+      <div class="input-mode-switch" role="tablist" aria-label="输入模式切换">
+        <button class="mode-tab active" id="btnModeText" type="button" role="tab" aria-selected="true">文本</button>
+        <button class="mode-tab" id="btnModeFile" type="button" role="tab" aria-selected="false">文件</button>
+      </div>
+
+      <div class="input-mode-panels">
+        <div class="input-mode-panel active" id="textComposer">
+          <textarea
+            id="inputArea"
+            placeholder="在这里粘贴内容，停止输入约 1 秒后会自动发送..."
+            rows="6"
+            autofocus
+          ></textarea>
+        </div>
+
+        <div class="input-mode-panel" id="fileComposer" hidden>
+          <input id="fileInput" type="file" hidden>
+          <div class="file-dropzone" id="fileDropzone" tabindex="0" role="button" aria-label="选择文件上传">
+            <div class="file-dropzone-copy">
+              <strong>选择文件或拖拽到这里</strong>
+              <span id="filePickerHint">单文件最大 100 MB，房间最多 30 个文件，不限制类型。</span>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="btnChooseFile" type="button">选择文件</button>
+          </div>
+
+          <div class="file-selection" id="fileSelection" hidden>
+            <div class="file-selection-meta">
+              <strong class="file-selection-name" id="fileName">未选择文件</strong>
+              <span class="file-selection-size" id="fileMeta"></span>
+            </div>
+            <div class="file-selection-actions">
+              <button class="btn btn-ghost btn-sm" id="btnClearFile" type="button">移除</button>
+              <button class="btn btn-primary btn-sm" id="btnUploadFile" type="button">上传文件</button>
+            </div>
+          </div>
+
+          <div class="upload-progress" id="uploadProgress" hidden>
+            <div class="upload-progress-bar">
+              <div class="upload-progress-value" id="uploadProgressValue"></div>
+            </div>
+            <span class="upload-progress-text" id="uploadProgressText">上传中 0%</span>
+          </div>
+        </div>
+      </div>
     </section>
 
     <div class="toolbar">
@@ -54,7 +93,7 @@
       <div class="empty-state" id="emptyState">
         <div class="empty-icon">⌘</div>
         <p>还没有内容</p>
-        <p class="empty-hint">先把内容贴进来，再在其他设备上打开同一个房间。</p>
+        <p class="empty-hint">可以发送文本，也可以上传文件，再在其他设备上打开同一个房间。</p>
       </div>
     </main>
 

@@ -11,6 +11,7 @@ import json
 import os
 import re
 import secrets
+import shutil
 import tempfile
 import time
 import uuid
@@ -32,12 +33,16 @@ from flask import (
     stream_with_context,
     url_for,
 )
+from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
 # ─── Configuration ───────────────────────────────────────────────────
 DATA_DIR = Path(__file__).resolve().parent / "data"
 DATA_DIR.mkdir(exist_ok=True)
+UPLOADS_DIR = Path(__file__).resolve().parent / "uploads"
+UPLOADS_DIR.mkdir(exist_ok=True)
 
 CONTENT_TTL_HOURS = int(os.environ.get("CONTENT_TTL_HOURS", "480"))
 ROOM_TTL_HOURS = int(os.environ.get("ROOM_TTL_HOURS", "480"))
@@ -45,6 +50,10 @@ EMPTY_ROOM_TTL_HOURS = int(os.environ.get("EMPTY_ROOM_TTL_HOURS", "24"))
 MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", "50000"))
 MAX_ITEMS_PER_ROOM = int(os.environ.get("MAX_ITEMS_PER_ROOM", "500"))
 MAX_ITEMS_PAGE_SIZE = int(os.environ.get("MAX_ITEMS_PAGE_SIZE", "100"))
+MAX_FILES_PER_ROOM = int(os.environ.get("MAX_FILES_PER_ROOM", "30"))
+MAX_FILE_SIZE_BYTES = int(
+    os.environ.get("MAX_FILE_SIZE_BYTES", str(100 * 1024 * 1024))
+)
 MAX_ROOMS = int(os.environ.get("MAX_ROOMS", "2000"))
 WRITE_RATE_LIMIT = int(os.environ.get("WRITE_RATE_LIMIT", "40"))
 WRITE_RATE_WINDOW_SECONDS = int(os.environ.get("WRITE_RATE_WINDOW_SECONDS", "60"))
@@ -55,6 +64,8 @@ STORAGE_CLEANUP_INTERVAL_SECONDS = int(
     os.environ.get("STORAGE_CLEANUP_INTERVAL_SECONDS", "300")
 )
 MAX_SUBSCRIBERS_PER_ROOM = int(os.environ.get("MAX_SUBSCRIBERS_PER_ROOM", "100"))
+
+app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE_BYTES + (2 * 1024 * 1024)
 
 # ─── In-memory room cache ────────────────────────────────────────────
 ROOM_CACHE: dict[str, dict] = {}
@@ -111,6 +122,14 @@ def _safe_room_name(name: str) -> str:
 
 def _data_path(room: str) -> Path:
     return DATA_DIR / f"{_safe_room_name(room)}.json"
+
+
+def _room_upload_dir(room: str) -> Path:
+    return UPLOADS_DIR / _safe_room_name(room)
+
+
+def _stored_file_path(room: str, stored_name: str) -> Path:
+    return _room_upload_dir(room) / Path(stored_name).name
 
 
 def _is_valid_room_name(room: str) -> bool:
@@ -171,23 +190,95 @@ def _default_room_state(now: datetime | None = None) -> dict:
     }
 
 
-def _normalize_item(raw_item: object) -> tuple[dict | None, datetime | None, bool]:
+def _safe_display_filename(filename: str) -> str:
+    cleaned = Path(str(filename or "")).name.strip()
+    return cleaned[:255] or "file"
+
+
+def _remove_file_storage(room: str, item: dict) -> None:
+    if item.get("type") != "file":
+        return
+
+    stored_name = str(item.get("stored_name") or "").strip()
+    if not stored_name:
+        return
+
+    try:
+        _stored_file_path(room, stored_name).unlink()
+    except OSError:
+        pass
+
+    upload_dir = _room_upload_dir(room)
+    try:
+        if upload_dir.exists() and not any(upload_dir.iterdir()):
+            upload_dir.rmdir()
+    except OSError:
+        pass
+
+
+def _file_item_count(items: list[dict]) -> int:
+    return sum(1 for item in items if item.get("type") == "file")
+
+
+def _normalize_item(room: str, raw_item: object) -> tuple[dict | None, datetime | None, bool]:
     if not isinstance(raw_item, dict):
         return None, None, True
 
-    content = str(raw_item.get("content") or "").strip()
+    item_type = str(raw_item.get("type") or "text").strip().lower()
     created_at = _parse_datetime(raw_item.get("created_at"))
-    if not content or created_at is None:
+    if created_at is None:
         return None, None, True
 
     item_id = str(raw_item.get("id") or uuid.uuid4().hex[:8])[:64]
+    if item_type == "file":
+        filename = _safe_display_filename(raw_item.get("filename") or "")
+        stored_name = Path(str(raw_item.get("stored_name") or "")).name.strip()
+        mime_type = str(raw_item.get("mime_type") or "application/octet-stream")[:255]
+
+        try:
+            size = int(raw_item.get("size") or 0)
+        except (TypeError, ValueError):
+            size = -1
+
+        if not stored_name or size < 0:
+            return None, None, True
+
+        if not _stored_file_path(room, stored_name).exists():
+            return None, None, True
+
+        normalized = {
+            "id": item_id,
+            "type": "file",
+            "filename": filename,
+            "stored_name": stored_name,
+            "mime_type": mime_type,
+            "size": size,
+            "created_at": created_at.isoformat(),
+        }
+        changed = (
+            raw_item.get("id") != normalized["id"]
+            or raw_item.get("type") != normalized["type"]
+            or raw_item.get("filename") != normalized["filename"]
+            or raw_item.get("stored_name") != normalized["stored_name"]
+            or raw_item.get("mime_type") != normalized["mime_type"]
+            or raw_item.get("size") != normalized["size"]
+            or raw_item.get("created_at") != normalized["created_at"]
+        )
+        return normalized, created_at, changed
+
+    content = str(raw_item.get("content") or "").strip()
+    if not content:
+        return None, None, True
+
     normalized = {
         "id": item_id,
+        "type": "text",
         "content": content,
         "created_at": created_at.isoformat(),
     }
     changed = (
         raw_item.get("id") != normalized["id"]
+        or raw_item.get("type") != normalized["type"]
         or raw_item.get("content") != normalized["content"]
         or raw_item.get("created_at") != normalized["created_at"]
     )
@@ -195,6 +286,7 @@ def _normalize_item(raw_item: object) -> tuple[dict | None, datetime | None, boo
 
 
 def _clean_expired_items(
+    room: str,
     items_with_datetimes: list[tuple[datetime, dict]],
     now: datetime | None = None,
 ) -> list[tuple[datetime, dict]]:
@@ -202,14 +294,16 @@ def _clean_expired_items(
         return items_with_datetimes
 
     cutoff = (now or _now_utc()) - timedelta(hours=CONTENT_TTL_HOURS)
-    return [
-        (created_at, item)
-        for created_at, item in items_with_datetimes
-        if created_at > cutoff
-    ]
+    kept_items: list[tuple[datetime, dict]] = []
+    for created_at, item in items_with_datetimes:
+        if created_at > cutoff:
+            kept_items.append((created_at, item))
+            continue
+        _remove_file_storage(room, item)
+    return kept_items
 
 
-def _normalize_room_state(raw_data: object) -> tuple[dict, bool]:
+def _normalize_room_state(room: str, raw_data: object) -> tuple[dict, bool]:
     now = _now_utc()
     changed = not isinstance(raw_data, dict)
 
@@ -233,12 +327,12 @@ def _normalize_room_state(raw_data: object) -> tuple[dict, bool]:
 
     items_with_datetimes: list[tuple[datetime, dict]] = []
     for raw_item in raw_items:
-        normalized_item, created_at, item_changed = _normalize_item(raw_item)
+        normalized_item, created_at, item_changed = _normalize_item(room, raw_item)
         changed = changed or item_changed
         if normalized_item is not None and created_at is not None:
             items_with_datetimes.append((created_at, normalized_item))
 
-    cleaned_items = _clean_expired_items(items_with_datetimes, now)
+    cleaned_items = _clean_expired_items(room, items_with_datetimes, now)
     if len(cleaned_items) != len(items_with_datetimes):
         changed = True
     items_with_datetimes = cleaned_items
@@ -304,7 +398,7 @@ def _load_room_state(room: str) -> tuple[dict, bool, bool]:
             pass
         return _default_room_state(), False, True
 
-    state, changed = _normalize_room_state(raw_data)
+    state, changed = _normalize_room_state(room, raw_data)
     if not changed:
         with ROOM_CACHE_LOCK:
             ROOM_CACHE[room] = state
@@ -327,6 +421,10 @@ def _room_should_expire(state: dict, now: datetime | None = None) -> bool:
 def _delete_room_file(room: str) -> None:
     try:
         _data_path(room).unlink()
+    except OSError:
+        pass
+    try:
+        shutil.rmtree(_room_upload_dir(room))
     except OSError:
         pass
     with ROOM_STATE_LOCKS_LOCK:
@@ -355,7 +453,7 @@ def _touch_room_write(state: dict, now: datetime | None = None) -> None:
 
 
 def _save_room_state(room: str, state: dict, *, normalized: bool = False) -> bool:
-    normalized_state = state if normalized else _normalize_room_state(state)[0]
+    normalized_state = state if normalized else _normalize_room_state(room, state)[0]
     now = _now_utc()
 
     if _room_should_expire(normalized_state, now):
@@ -564,7 +662,7 @@ def _sse_message(event: str, payload: dict) -> str:
 
 @app.before_request
 def before_request_housekeeping() -> None:
-    if request.endpoint in {"add_item", "delete_item", "clear_items"}:
+    if request.endpoint in {"add_item", "add_file", "delete_item", "clear_items"}:
         _enforce_write_rate_limit()
 
 
@@ -599,6 +697,12 @@ def handle_rate_limit(error: RateLimitError) -> Response:
 @app.errorhandler(RoomCapacityError)
 def handle_room_capacity(error: RoomCapacityError) -> Response:
     return _json_error(str(error), 503)
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_request_too_large(_: RequestEntityTooLarge) -> Response:
+    max_mb = MAX_FILE_SIZE_BYTES / (1024 * 1024)
+    return _json_error(f"文件过大，最大支持 {max_mb:.0f} MB", 413)
 
 
 @app.route("/")
@@ -691,6 +795,7 @@ def add_item():
 
         item = {
             "id": uuid.uuid4().hex[:8],
+            "type": "text",
             "content": content,
             "created_at": now.isoformat(),
         }
@@ -701,6 +806,90 @@ def add_item():
 
     _broadcast_room_update(room)
     response = jsonify(item)
+    response.status_code = 201
+    return _add_no_store_headers(response)
+
+
+@app.route("/api/files", methods=["POST"])
+def add_file():
+    room = _get_request_room()
+    if room is None:
+        return _json_error("invalid room", 400)
+
+    upload = request.files.get("file")
+    if upload is None:
+        return _json_error("请选择文件", 400)
+
+    original_filename = _safe_display_filename(upload.filename or "")
+    if not original_filename:
+        return _json_error("文件名无效", 400)
+
+    if not _data_path(room).exists():
+        _ensure_room_capacity()
+
+    room_lock = _get_room_lock(room)
+    tmp_path: Path | None = None
+    file_item: dict | None = None
+
+    with room_lock:
+        state, exists, _ = _load_room_state(room)
+        now = _now_utc()
+
+        if exists and _room_should_expire(state, now):
+            _delete_room_file(room)
+            state = _default_room_state(now)
+            exists = False
+
+        items = list(state.get("items", []))
+        if len(items) >= MAX_ITEMS_PER_ROOM:
+            return _json_error(f"房间已满，最多 {MAX_ITEMS_PER_ROOM} 条记录", 400)
+        if _file_item_count(items) >= MAX_FILES_PER_ROOM:
+            return _json_error(f"房间文件已达上限，最多 {MAX_FILES_PER_ROOM} 个", 400)
+
+        safe_name = secure_filename(original_filename) or "file"
+        item_id = uuid.uuid4().hex[:8]
+        stored_name = f"{item_id}_{safe_name[:180]}"
+        upload_dir = _room_upload_dir(room)
+        upload_dir.mkdir(parents=True, exist_ok=True)
+
+        fd, raw_tmp_path = tempfile.mkstemp(dir=upload_dir, suffix=".upload")
+        os.close(fd)
+        tmp_path = Path(raw_tmp_path)
+
+        try:
+            upload.save(tmp_path)
+            file_size = tmp_path.stat().st_size
+            if file_size <= 0:
+                tmp_path.unlink(missing_ok=True)
+                return _json_error("文件不能为空", 400)
+            if file_size > MAX_FILE_SIZE_BYTES:
+                tmp_path.unlink(missing_ok=True)
+                max_mb = MAX_FILE_SIZE_BYTES / (1024 * 1024)
+                return _json_error(f"文件过大，最大支持 {max_mb:.0f} MB", 400)
+
+            final_path = _stored_file_path(room, stored_name)
+            os.replace(tmp_path, final_path)
+        except Exception:
+            if tmp_path.exists():
+                tmp_path.unlink(missing_ok=True)
+            raise
+
+        file_item = {
+            "id": item_id,
+            "type": "file",
+            "filename": original_filename,
+            "stored_name": stored_name,
+            "mime_type": str(upload.mimetype or "application/octet-stream")[:255],
+            "size": file_size,
+            "created_at": now.isoformat(),
+        }
+        items.insert(0, file_item)
+        state["items"] = items
+        _touch_room_write(state, now)
+        _save_room_state(room, state, normalized=True)
+
+    _broadcast_room_update(room)
+    response = jsonify(file_item)
     response.status_code = 201
     return _add_no_store_headers(response)
 
@@ -719,9 +908,13 @@ def delete_item(item_id: str):
             response = jsonify({"ok": True})
             return _add_no_store_headers(response)
 
-        items = [item for item in state.get("items", []) if item.get("id") != item_id]
-        if len(items) != len(state.get("items", [])):
+        current_items = list(state.get("items", []))
+        target_item = next((item for item in current_items if item.get("id") == item_id), None)
+        items = [item for item in current_items if item.get("id") != item_id]
+        if len(items) != len(current_items):
             changed = True
+            if target_item is not None:
+                _remove_file_storage(room, target_item)
             state["items"] = items
             _touch_room_write(state)
             _save_room_state(room, state, normalized=True)
@@ -744,6 +937,8 @@ def clear_items():
         state, exists, _ = _load_room_state(room)
         if exists and state.get("items"):
             changed = True
+            for item in state.get("items", []):
+                _remove_file_storage(room, item)
             state["items"] = []
             _touch_room_write(state)
             _save_room_state(room, state, normalized=True)
@@ -752,6 +947,42 @@ def clear_items():
         _broadcast_room_update(room)
     response = jsonify({"ok": True})
     return _add_no_store_headers(response)
+
+
+@app.route("/api/files/<item_id>")
+def download_file(item_id: str):
+    room = _get_request_room()
+    if room is None:
+        return _json_error("invalid room", 400)
+
+    state, exists = _load_active_room_state(room, touch_activity=True)
+    if not exists:
+        return _json_error("文件不存在", 404)
+
+    file_item = next(
+        (
+            item
+            for item in state.get("items", [])
+            if item.get("id") == item_id and item.get("type") == "file"
+        ),
+        None,
+    )
+    if file_item is None:
+        return _json_error("文件不存在", 404)
+
+    file_path = _stored_file_path(room, str(file_item.get("stored_name") or ""))
+    if not file_path.exists():
+        return _json_error("文件不存在或已过期", 404)
+
+    response = send_file(
+        file_path,
+        as_attachment=True,
+        download_name=str(file_item.get("filename") or "file"),
+        mimetype=str(file_item.get("mime_type") or "application/octet-stream"),
+        conditional=True,
+    )
+    response.headers["Cache-Control"] = "private, no-store, max-age=0"
+    return response
 
 
 @app.route("/api/stream")

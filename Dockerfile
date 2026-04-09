@@ -20,7 +20,7 @@ COPY gunicorn.conf.py ./gunicorn.conf.py
 COPY static ./static
 COPY templates ./templates
 
-RUN mkdir -p /app/data && chown -R appuser:appuser /app
+RUN mkdir -p /app/data /app/uploads && chown -R appuser:appuser /app
 
 USER appuser
 
