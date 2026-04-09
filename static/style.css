@@ -233,7 +233,7 @@ body.modal-open {
 .share-copy {
   min-width: 0;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
   flex: 1;
   position: relative;
@@ -241,22 +241,10 @@ body.modal-open {
 }
 
 .share-label {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--accent);
-  letter-spacing: 0.06em;
-}
-
-.share-note {
-  color: var(--text-secondary);
+  font-size: 0.84rem;
   font-weight: 600;
-  letter-spacing: normal;
-}
-
-.share-hint {
-  font-size: 0.85rem;
   color: var(--text-secondary);
-  line-height: 1.5;
+  letter-spacing: normal;
 }
 
 #qrContainer {
@@ -494,9 +482,15 @@ body.modal-open {
   margin-bottom: 10px;
   max-height: 300px;
   overflow-y: auto;
-  overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 122, 255, 0.42) rgba(148, 163, 184, 0.12);
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .clip-content {
+    max-height: none;
+    overflow-y: visible;
+  }
 }
 
 .clip-content.collapsed {

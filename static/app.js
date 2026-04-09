@@ -23,7 +23,7 @@ const inputArea = $("#inputArea");
 const btnRefresh = $("#btnRefresh");
 const btnClear = $("#btnClear");
 const btnNewRoom = $("#btnNewRoom");
-const btnCopyUrl = $("#btnCopyUrl");
+const btnCopyUrl = null;
 const itemList = $("#itemList");
 const emptyState = $("#emptyState");
 const itemCount = $("#itemCount");
@@ -32,7 +32,7 @@ const itemLoadStatus = $("#itemLoadStatus");
 const loadMoreSentinel = $("#loadMoreSentinel");
 const roomBadge = $("#roomBadge");
 const qrContainer = $("#qrContainer");
-const qrUrl = $("#qrUrl");
+const qrUrl = null;
 const clearConfirmModal = $("#clearConfirmModal");
 const newRoomModal = $("#newRoomModal");
 const toastContainer = $("#toastContainer");
@@ -117,8 +117,7 @@ function bindEvents() {
   );
   btnClear.addEventListener("click", openClearConfirmModal);
   btnNewRoom.addEventListener("click", openNewRoomModal);
-  roomBadge.addEventListener("click", () => copyText(ROOM_ID, "房间号已复制"));
-  btnCopyUrl.addEventListener("click", () => copyText(window.location.href, "链接已复制"));
+  roomBadge.addEventListener("click", () => copyText(window.location.href, "链接已复制"));
 
   btnCloseClearConfirm.addEventListener("click", () => setModalOpen(clearConfirmModal, false));
   btnConfirmClear.addEventListener("click", confirmClearItems);
@@ -934,8 +933,6 @@ function loadQr() {
   const url = window.location.href;
   const displayUrl = url.replace(/^https?:\/\//, "");
   qrContainer.innerHTML = `<img src="/api/qr?text=${encodeURIComponent(url)}" alt="房间二维码">`;
-  qrUrl.textContent = displayUrl;
-  qrUrl.title = url;
 }
 
 function setupLoadMoreObserver() {

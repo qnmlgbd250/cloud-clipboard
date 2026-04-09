@@ -19,7 +19,7 @@
         <h1>云剪贴板</h1>
       </div>
       <div class="header-tools">
-        <button class="room-chip" id="roomBadge" type="button" title="点击复制房间号"></button>
+        <button class="room-chip" id="roomBadge" type="button" title="点击复制链接"></button>
         <button class="icon-btn new-room-btn" id="btnNewRoom" type="button" title="新建房间" aria-label="新建房间">+</button>
       </div>
     </header>
@@ -27,13 +27,7 @@
     <section class="share-section">
       <div class="share-card">
         <div class="share-copy">
-          <p class="share-label">
-            扫码访问当前房间
-            <span class="share-note">（内容保留 20 天，房间 20 天未使用自动清理）</span>
-          </p>
-          <p class="share-hint">直接扫码，或复制链接到另一台设备，马上进入同一个房间。</p>
-          <p class="qr-url" id="qrUrl"></p>
-          <button class="btn btn-ghost btn-sm btn-copy-url" id="btnCopyUrl" type="button">复制链接</button>
+          <p class="share-label">扫码进入房间，或点击房间号复制链接（20 天有效）</p>
         </div>
         <div id="qrContainer" aria-label="当前房间二维码"></div>
       </div>
