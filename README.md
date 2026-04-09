@@ -162,6 +162,20 @@ docker compose up -d
 - 首次是 `build`，会联网安装一次依赖
 - 后续普通重启容器不会再次下载依赖
 - 只挂载 `./data:/app/data`，不要再把整个项目目录挂到 `/app`
+- 默认构建参数已使用清华 PyPI 镜像；如果要换源，修改 `docker-compose.yml` 里的 `build.args`
+
+### 可选国内源
+
+当前默认：
+
+- `https://pypi.tuna.tsinghua.edu.cn/simple`
+
+如果你所在网络对这个镜像不稳定，也可以改成：
+
+- 阿里云：`https://mirrors.aliyun.com/pypi/simple`
+- 中科大：`https://pypi.mirrors.ustc.edu.cn/simple`
+
+同时把 `PIP_TRUSTED_HOST` 改成对应域名即可。
 
 ### 为什么这里默认是 `1 worker`
 
