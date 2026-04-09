@@ -20,6 +20,8 @@ const btnClear = $("#btnClear");
 const btnNewRoom = $("#btnNewRoom");
 const itemList = $("#itemList");
 const emptyState = $("#emptyState");
+const emptyStateTitle = emptyState?.querySelector("p");
+const emptyStateHint = emptyState?.querySelector(".empty-hint");
 const itemCount = $("#itemCount");
 const itemFeedFooter = $("#itemFeedFooter");
 const itemLoadStatus = $("#itemLoadStatus");
@@ -569,6 +571,31 @@ function syncClearConfirmState(count = getCurrentItemCount()) {
   btnConfirmClear.textContent = isClearing ? "清空中..." : "确认清空";
 }
 
+function getDisplayItems(items = currentItems) {
+  const sourceItems = Array.isArray(items) ? items : [];
+  return currentMode === "file" ? sourceItems.filter((item) => item.type === "file") : sourceItems.filter((item) => item.type !== "file");
+}
+
+function getCurrentModeLabel() {
+  return currentMode === "file" ? "文件" : "文本";
+}
+
+function updateEmptyState() {
+  if (!emptyStateTitle || !emptyStateHint) return;
+  if (totalItems === 0) {
+    emptyStateTitle.textContent = "还没有内容";
+    emptyStateHint.textContent = "可以发送文本，也可以上传文件，再在其他设备上打开同一个房间。";
+    return;
+  }
+  if (currentMode === "file") {
+    emptyStateTitle.textContent = "当前没有文件";
+    emptyStateHint.textContent = "这个房间里暂时还没有文件，切换到文本页仍可查看已发送的文字内容。";
+    return;
+  }
+  emptyStateTitle.textContent = "当前没有文本";
+  emptyStateHint.textContent = "这个房间里暂时还没有文本，切换到文件页可查看已上传的文件。";
+}
+
 function updateLoadMoreState() {
   if (totalItems === 0) {
     itemFeedFooter.hidden = true;
@@ -576,15 +603,21 @@ function updateLoadMoreState() {
     return;
   }
   itemFeedFooter.hidden = false;
-  const visibleCount = currentItems.length;
-  itemLoadStatus.textContent = visibleCount >= totalItems ? `已显示全部 ${totalItems} 条` : `已显示 ${visibleCount} / ${totalItems} 条`;
+  const loadedCount = currentItems.length;
+  const displayCount = getDisplayItems().length;
+  const modeLabel = getCurrentModeLabel();
+  itemLoadStatus.textContent = loadedCount >= totalItems
+    ? `已加载全部 ${totalItems} 条，当前显示 ${displayCount} 条${modeLabel}`
+    : `已加载 ${loadedCount} / ${totalItems} 条，当前显示 ${displayCount} 条${modeLabel}`;
 }
 
 function renderItems(items) {
   currentItems = Array.isArray(items) ? items.slice() : [];
-  itemCount.textContent = `${totalItems} 条记录`;
+  const displayItems = getDisplayItems(currentItems);
+  itemCount.textContent = currentMode === "file" ? `${displayItems.length} 个文件` : `${displayItems.length} 条文本`;
   btnClear.disabled = totalItems === 0;
-  if (currentItems.length === 0) {
+  if (displayItems.length === 0) {
+    updateEmptyState();
     emptyState.style.display = "";
     itemList.replaceChildren(emptyState);
     syncClearConfirmState(totalItems);
@@ -593,10 +626,7 @@ function renderItems(items) {
   }
   emptyState.style.display = "none";
   const fragment = document.createDocumentFragment();
-  const textItems = currentItems.filter((item) => item.type !== "file");
-  const fileItems = currentItems.filter((item) => item.type === "file");
-  if (textItems.length) fragment.appendChild(createItemSection("文字列表", textItems));
-  if (fileItems.length) fragment.appendChild(createItemSection("文件列表", fileItems));
+  fragment.appendChild(createItemSection(currentMode === "file" ? "文件列表" : "文字列表", displayItems));
   itemList.replaceChildren(fragment);
   syncClearConfirmState(totalItems);
   updateLoadMoreState();
@@ -858,6 +888,7 @@ function setMode(mode) {
   } else {
     clearAutoSendTimer();
   }
+  renderItems(currentItems);
 }
 
 function handleFileSelection(event) {
