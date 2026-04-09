@@ -444,6 +444,24 @@ body.modal-open {
   gap: 8px;
 }
 
+.item-feed-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 0 8px;
+}
+
+.item-load-status {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.load-more-sentinel {
+  width: 100%;
+  height: 1px;
+}
+
 .clip-item {
   border-radius: var(--radius);
   padding: 14px 16px;

@@ -5,11 +5,13 @@
 const scriptEl = document.currentScript || document.querySelector("script[data-room]");
 const ROOM_ID = scriptEl?.dataset.room || "";
 const API_BASE = "";
+const ITEMS_PAGE_SIZE = 20;
 const POLL_INTERVAL = 5000;
 const STREAM_RETRY_DELAY = 2000;
 const MOBILE_PREVIEW_LIMIT = 56;
 const DESKTOP_PREVIEW_LIMIT = 150;
 const AUTO_SEND_DELAY = 1000;
+const AUTO_LOAD_ROOT_MARGIN = "240px 0px";
 const FOREGROUND_SYNC_COOLDOWN_MS = 800;
 const CUSTOM_ROOM_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const compactPreviewQuery = window.matchMedia("(max-width: 560px)");
@@ -25,6 +27,9 @@ const btnCopyUrl = $("#btnCopyUrl");
 const itemList = $("#itemList");
 const emptyState = $("#emptyState");
 const itemCount = $("#itemCount");
+const itemFeedFooter = $("#itemFeedFooter");
+const itemLoadStatus = $("#itemLoadStatus");
+const loadMoreSentinel = $("#loadMoreSentinel");
 const roomBadge = $("#roomBadge");
 const qrContainer = $("#qrContainer");
 const qrUrl = $("#qrUrl");
@@ -52,6 +57,10 @@ let isComposing = false;
 let autoSendTimer = null;
 let pendingAutoSend = false;
 let currentItems = [];
+let totalItems = 0;
+let hasMoreItems = false;
+let isLoadingMore = false;
+let loadMoreObserver = null;
 let isCompactPreview = compactPreviewQuery.matches;
 let lastForegroundSyncAt = 0;
 let lastSuccessfulLoadAt = 0;
@@ -60,6 +69,7 @@ roomBadge.textContent = ROOM_ID;
 roomBadge.title = `点击复制房间号：${ROOM_ID}`;
 autoResize();
 bindEvents();
+setupLoadMoreObserver();
 loadQr();
 loadItems({ forceFresh: true });
 startRealtimeSync();
@@ -102,7 +112,9 @@ function bindEvents() {
     }
   });
 
-  btnRefresh.addEventListener("click", () => loadItems({ manual: true, forceFresh: true }));
+  btnRefresh.addEventListener("click", () =>
+    loadItems({ manual: true, forceFresh: true, limit: getVisibleItemTarget() })
+  );
   btnClear.addEventListener("click", openClearConfirmModal);
   btnNewRoom.addEventListener("click", openNewRoomModal);
   roomBadge.addEventListener("click", () => copyText(ROOM_ID, "房间号已复制"));
@@ -252,10 +264,17 @@ function scheduleAutoSend(delay = AUTO_SEND_DELAY) {
   }, delay);
 }
 
-function buildApiUrl(path, { bust = false } = {}) {
+function buildApiUrl(path, { bust = false, params = {} } = {}) {
   const basePath = API_BASE ? `${API_BASE}${path}` : path;
   const url = new URL(basePath, window.location.origin);
   url.searchParams.set("room", ROOM_ID);
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") {
+      return;
+    }
+    url.searchParams.set(key, String(value));
+  });
 
   if (bust) {
     url.searchParams.set("_", Date.now().toString());
@@ -265,9 +284,11 @@ function buildApiUrl(path, { bust = false } = {}) {
 }
 
 function queueLoad(options = {}) {
+  const nextLimit = Number.isFinite(options.limit) ? options.limit : 0;
   queuedLoadOptions = {
     manual: Boolean(options.manual) || Boolean(queuedLoadOptions?.manual),
     forceFresh: Boolean(options.forceFresh) || Boolean(queuedLoadOptions?.forceFresh),
+    limit: Math.max(nextLimit, queuedLoadOptions?.limit || 0) || undefined,
   };
 }
 
@@ -294,14 +315,70 @@ function areItemsEqual(prevItems, nextItems) {
   return true;
 }
 
-function applyItems(items) {
+function getVisibleItemTarget() {
+  return Math.max(currentItems.length, ITEMS_PAGE_SIZE);
+}
+
+function normalizeItemsPayload(payload, { offset = 0, limit = ITEMS_PAGE_SIZE } = {}) {
+  if (Array.isArray(payload)) {
+    return {
+      items: payload,
+      total: payload.length,
+      hasMore: false,
+      offset,
+      limit,
+    };
+  }
+
+  const items = Array.isArray(payload?.items) ? payload.items : [];
+  const total = Number.isFinite(payload?.total) ? Math.max(payload.total, items.length) : items.length;
+  const safeOffset = Number.isFinite(payload?.offset) ? Math.max(payload.offset, 0) : offset;
+  const safeLimit = Number.isFinite(payload?.limit) ? Math.max(payload.limit, items.length) : limit;
+  const hasMore = typeof payload?.has_more === "boolean"
+    ? payload.has_more
+    : safeOffset + items.length < total;
+
+  return {
+    items,
+    total,
+    hasMore,
+    offset: safeOffset,
+    limit: safeLimit,
+  };
+}
+
+function applyItems(items, { total = items.length, hasMore = false } = {}) {
   const nextItems = Array.isArray(items) ? items : [];
-  if (areItemsEqual(currentItems, nextItems)) {
+  const nextTotal = Number.isFinite(total) ? Math.max(total, nextItems.length) : nextItems.length;
+  const nextHasMore = Boolean(hasMore) && nextItems.length < nextTotal;
+
+  if (
+    areItemsEqual(currentItems, nextItems) &&
+    totalItems === nextTotal &&
+    hasMoreItems === nextHasMore
+  ) {
     return false;
   }
 
+  totalItems = nextTotal;
+  hasMoreItems = nextHasMore;
   renderItems(nextItems);
   return true;
+}
+
+function appendItems(items, { total = totalItems, hasMore = false } = {}) {
+  const mergedItems = currentItems.slice();
+  const seenIds = new Set(mergedItems.map((item) => item.id));
+
+  items.forEach((item) => {
+    if (seenIds.has(item.id)) {
+      return;
+    }
+    mergedItems.push(item);
+    seenIds.add(item.id);
+  });
+
+  return applyItems(mergedItems, { total, hasMore });
 }
 
 function scheduleForegroundSync() {
@@ -311,46 +388,88 @@ function scheduleForegroundSync() {
   }
 
   lastForegroundSyncAt = now;
-  loadItems({ forceFresh: true });
+  loadItems({ forceFresh: true, limit: getVisibleItemTarget() });
   ensureRealtimeSync();
 }
 
 async function loadItems(options = {}) {
-  const { manual = false, forceFresh = false } = options;
+  const {
+    manual = false,
+    forceFresh = false,
+    append = false,
+    limit = ITEMS_PAGE_SIZE,
+  } = options;
 
-  if (isLoading) {
-    queueLoad({ manual, forceFresh });
-    return;
+  if (append) {
+    if (isLoading || isLoadingMore || !hasMoreItems) {
+      return false;
+    }
   }
 
-  isLoading = true;
+  if (!append && (isLoading || isLoadingMore)) {
+    queueLoad({ manual, forceFresh, limit });
+    return false;
+  }
+
+  if (append) {
+    isLoadingMore = true;
+    updateLoadMoreState();
+  } else {
+    isLoading = true;
+    updateLoadMoreState();
+  }
 
   try {
-    const response = await fetch(buildApiUrl("/api/items", { bust: forceFresh }), {
-      cache: "no-store",
-      headers: {
-        "Cache-Control": "no-cache",
-        Pragma: "no-cache",
-      },
-    });
+    const offset = append ? currentItems.length : 0;
+    const safeLimit = Math.max(1, limit);
+    const response = await fetch(
+      buildApiUrl("/api/items", {
+        bust: forceFresh,
+        params: {
+          offset,
+          limit: safeLimit,
+        },
+      }),
+      {
+        cache: "no-store",
+        headers: {
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+      }
+    );
 
     if (!response.ok) {
       throw new Error("加载失败");
     }
 
     const payload = await response.json();
-    const items = Array.isArray(payload) ? payload : [];
+    const page = normalizeItemsPayload(payload, {
+      offset,
+      limit: safeLimit,
+    });
     lastSuccessfulLoadAt = Date.now();
-    applyItems(items);
+    if (append) {
+      appendItems(page.items, { total: page.total, hasMore: page.hasMore });
+    } else {
+      applyItems(page.items, { total: page.total, hasMore: page.hasMore });
+    }
+    return true;
   } catch (error) {
     if (manual) {
       showToast("加载失败", "error");
     }
     console.error("Failed to load items:", error);
+    return false;
   } finally {
-    isLoading = false;
+    if (append) {
+      isLoadingMore = false;
+    } else {
+      isLoading = false;
+    }
+    updateLoadMoreState();
 
-    if (queuedLoadOptions) {
+    if (!isLoading && !isLoadingMore && queuedLoadOptions) {
       const nextOptions = queuedLoadOptions;
       queuedLoadOptions = null;
       loadItems(nextOptions);
@@ -405,9 +524,21 @@ async function sendItem({ successMessage = "已同步" } = {}) {
 
     showToast(successMessage, "success");
     if (payload && typeof payload === "object") {
-      applyItems([payload, ...currentItems.filter((item) => item.id !== payload.id)]);
+      const nextTotal = currentItems.some((item) => item.id === payload.id)
+        ? totalItems
+        : totalItems + 1;
+      applyItems(
+        [payload, ...currentItems.filter((item) => item.id !== payload.id)].slice(
+          0,
+          getVisibleItemTarget()
+        ),
+        {
+          total: Math.max(nextTotal, 1),
+          hasMore: nextTotal > getVisibleItemTarget(),
+        }
+      );
     } else {
-      queueLoad({ forceFresh: true });
+      queueLoad({ forceFresh: true, limit: getVisibleItemTarget() });
     }
     return true;
   } catch (error) {
@@ -444,6 +575,8 @@ async function deleteItem(id, itemEl) {
   }
 
   try {
+    const wasVisible = currentItems.some((item) => item.id === id);
+    const visibleTarget = getVisibleItemTarget();
     const response = await fetch(buildApiUrl(`/api/items/${id}`), {
       method: "DELETE",
       cache: "no-store",
@@ -457,7 +590,14 @@ async function deleteItem(id, itemEl) {
     }
 
     showToast("已删除", "success");
-    applyItems(currentItems.filter((item) => item.id !== id));
+    const nextTotal = Math.max(totalItems - 1, 0);
+    applyItems(currentItems.filter((item) => item.id !== id), {
+      total: nextTotal,
+      hasMore: currentItems.length - 1 < nextTotal,
+    });
+    if (wasVisible && nextTotal >= visibleTarget) {
+      loadItems({ forceFresh: true, limit: visibleTarget });
+    }
   } catch (error) {
     showToast("删除失败", "error");
   }
@@ -500,7 +640,7 @@ async function confirmClearItems() {
 
     setModalOpen(clearConfirmModal, false);
     showToast("已清空", "success");
-    applyItems([]);
+    applyItems([], { total: 0, hasMore: false });
   } catch (error) {
     showToast("清空失败", "error");
   } finally {
@@ -510,7 +650,7 @@ async function confirmClearItems() {
 }
 
 function getCurrentItemCount() {
-  return currentItems.length;
+  return totalItems;
 }
 
 function getPreviewLimit() {
@@ -541,21 +681,39 @@ function syncClearConfirmState(count = getCurrentItemCount()) {
   btnConfirmClear.textContent = isClearing ? "清空中..." : "确认清空";
 }
 
+function updateLoadMoreState() {
+  if (totalItems === 0) {
+    itemFeedFooter.hidden = true;
+    itemLoadStatus.textContent = "";
+    return;
+  }
+
+  itemFeedFooter.hidden = false;
+  const visibleCount = currentItems.length;
+  const showingAll = visibleCount >= totalItems;
+
+  itemLoadStatus.textContent = showingAll
+    ? `已显示全部 ${totalItems} 条`
+    : `已显示 ${visibleCount} / ${totalItems} 条`;
+}
+
 function renderItems(items) {
   currentItems = Array.isArray(items) ? items.slice() : [];
-  itemCount.textContent = `${currentItems.length} 条记录`;
-  btnClear.disabled = currentItems.length === 0;
+  itemCount.textContent = `${totalItems} 条记录`;
+  btnClear.disabled = totalItems === 0;
 
   if (currentItems.length === 0) {
     emptyState.style.display = "";
     itemList.replaceChildren(emptyState);
-    syncClearConfirmState(0);
+    syncClearConfirmState(totalItems);
+    updateLoadMoreState();
     return;
   }
 
   emptyState.style.display = "none";
   patchItems(itemList, currentItems);
-  syncClearConfirmState(currentItems.length);
+  syncClearConfirmState(totalItems);
+  updateLoadMoreState();
 }
 
 function patchItems(container, items) {
@@ -780,6 +938,44 @@ function loadQr() {
   qrUrl.title = url;
 }
 
+function setupLoadMoreObserver() {
+  if (typeof IntersectionObserver !== "function" || !loadMoreSentinel) {
+    return;
+  }
+
+  loadMoreObserver = new IntersectionObserver(
+    (entries) => {
+      const isVisible = entries.some((entry) => entry.isIntersecting);
+      if (!isVisible || document.hidden) {
+        return;
+      }
+      if (window.scrollY <= 0 && currentItems.length <= ITEMS_PAGE_SIZE) {
+        return;
+      }
+      loadMoreItems();
+    },
+    {
+      rootMargin: AUTO_LOAD_ROOT_MARGIN,
+    }
+  );
+  loadMoreObserver.observe(loadMoreSentinel);
+}
+
+function loadMoreItems(options = {}) {
+  const remaining = Math.max(totalItems - currentItems.length, 0);
+  if (remaining <= 0) {
+    updateLoadMoreState();
+    return Promise.resolve(false);
+  }
+
+  return loadItems({
+    append: true,
+    forceFresh: true,
+    manual: Boolean(options.manual),
+    limit: Math.min(ITEMS_PAGE_SIZE, remaining),
+  });
+}
+
 function normalizeRoomId(value) {
   return value.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64);
 }
@@ -845,11 +1041,11 @@ function connectRealtimeStream() {
   realtimeSource.addEventListener("ready", () => {
     stopPolling();
     if (!lastSuccessfulLoadAt || Date.now() - lastSuccessfulLoadAt > POLL_INTERVAL) {
-      loadItems({ forceFresh: true });
+      loadItems({ forceFresh: true, limit: getVisibleItemTarget() });
     }
   });
   realtimeSource.addEventListener("items_changed", () => {
-    loadItems({ forceFresh: true });
+    loadItems({ forceFresh: true, limit: getVisibleItemTarget() });
   });
   realtimeSource.onerror = () => {
     closeRealtimeSync();
@@ -883,7 +1079,7 @@ function startPolling() {
 
   pollTimer = window.setInterval(() => {
     if (!document.hidden) {
-      loadItems({ forceFresh: true });
+      loadItems({ forceFresh: true, limit: getVisibleItemTarget() });
     }
   }, POLL_INTERVAL);
 }

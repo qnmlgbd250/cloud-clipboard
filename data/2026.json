@@ -1,0 +1,379 @@
+{
+  "room": {
+    "created_at": "2026-03-28T02:56:23.092355+00:00",
+    "last_activity_at": "2026-04-09T13:08:24.713108+00:00",
+    "last_write_at": "2026-04-09T12:50:45.930009+00:00"
+  },
+  "items": [
+    {
+      "id": "9e800949",
+      "content": "https://jisuchuan.com/69d7a099de8ff18384",
+      "created_at": "2026-04-09T12:50:45.930009+00:00"
+    },
+    {
+      "id": "ef1bfbb3",
+      "content": "https://jisuchuan.com/69d79f524a34a13029",
+      "created_at": "2026-04-09T12:45:22.888350+00:00"
+    },
+    {
+      "id": "bc3b3f46",
+      "content": "{\n  id: 'com.douban.frodo',\n  name: '豆瓣',\n  groups: [\n    {\n      key: -1,\n      name: '开屏广告',\n      matchTime: 10000,\n      resetMatch: 'app',\n      priorityTime: 10000,\n      forcedTime: 10000,\n      rules: [\n        {\n          key: 3,\n          fastQuery: true,\n          excludeMatches: '[text=\"去绑定邮箱\"][visibleToUser=true]',\n          matches:\n            '[text*=\"跳过\"][text.length<10][width<500 && height<300][visibleToUser=true]',\n          snapshotUrls: 'https://i.gkd.li/i/17687115',\n          excludeSnapshotUrls: 'https://i.gkd.li/i/23283375',\n        },\n      ],\n    },\n  ],\n}",
+      "created_at": "2026-04-09T12:45:11.753734+00:00"
+    },
+    {
+      "id": "0fb9770a",
+      "content": "{\n  id: 'com.douban.frodo',\n  name: '豆瓣',\n  groups: [\n    {\n      key: -1,\n      name: '开屏广告',\n      matchTime: 10000,\n      resetMatch: 'app',\n      priorityTime: 10000,\n      forcedTime: 10000,\n      rules: [\n        {\n          key: 3,\n          fastQuery: true,\n          excludeMatches: '[text=\"去绑定邮箱\"][visibleToUser=true]',\n          matches:\n            '[text*=\"跳过\"][text.length<10][width<500 && height<300][visibleToUser=true]',\n          snapshotUrls: 'https://i.gkd.li/i/17687115',\n          excludeSnapshotUrls: 'https://i.gkd.li/i/23283375',\n        },\n      ],\n    },\n  ],\n}",
+      "created_at": "2026-04-09T02:54:01.464633+00:00"
+    },
+    {
+      "id": "e4560aba",
+      "content": "{\n  \"id\": \"com.douban.frodo\",\n  \"name\": \"豆瓣开屏广告专用规则\",\n  \"version\": 3,\n  \"author\": \"Custom\",\n  \"description\": \"专门用于跳过豆瓣App开屏广告的规则\",\n  \"groups\": [\n    {\n      \"key\": 1,\n      \"name\": \"开屏广告\",\n      \"desc\": \"跳过豆瓣开屏广告\",\n      \"enable\": true,\n      \"order\": 1,\n      \"fastQuery\": true,\n      \"activityIds\": [\n        \"com.douban.frodo.activity.SplashActivity\"\n      ],\n      \"rules\": [\n        {\n          \"key\": 0,\n          \"name\": \"跳过开屏广告按钮\",\n          \"desc\": \"点击开屏广告右上角的跳过按钮\",\n          \"fastQuery\": true,\n          \"priority\": 10,\n          \"preKeys\": [],\n          \"matches\": [\n            \"[id='com.douban.frodo:id/jad_video_skip_btn'][clickable=true]\",\n            \"[text*='跳过'][visibleToUser=true]\"\n          ],\n          \"action\": \"clickCenter\",\n          \"snapshotUrls\": [],\n          \"exampleUrls\": \"\"\n        }\n      ]\n    }\n  ]\n}",
+      "created_at": "2026-04-08T13:31:44.845289+00:00"
+    },
+    {
+      "id": "3ef24f7f",
+      "content": "https://jisuchuan.com/69d6511b4e45b28819",
+      "created_at": "2026-04-08T13:00:10.504185+00:00"
+    },
+    {
+      "id": "6aece3d6",
+      "content": "1. 头部提醒精简 (index.html)\n  - 从原来的标题+副标题+提示+URL链接+复制按钮，精简为一句话：\"扫码进入房间，或点击房间号复制链接（20 天有效）\"\n  - 删除了 URL 链接显示和\"复制链接\"按钮\n\n  2. 点击房间号逻辑修改 (app.js)\n  - 原来点击房间号复制的是房间号文本（如 abc123）\n  - 现在点击房间号直接复制完整的访问链接，方便分享给其他设备\n\n  3. README 重写 (README.md)\n  - 面向普通用户，语言口语化、易懂\n  - 预留了 phone.png 和 web.png 的引用位置（你放好图片后就会显示）\n  - \"30秒上手\"三步引导\n  - 常见问题 FAQ\n  - 适合谁用的场景表格\n\n  等你把 phone.png 和 web.png 放到根目录就可以了。\n\n✻ Churned for 4m 24s\n\n❯ 按照这个项目的特点，帮我写一条小红书爆款图文宣传\n\n● 直接给你文案，你配合项目截图发图就行。\n\n  ---\n  封面图标题（大字）：传文件还在微信发自己？\n\n  ---\n  标题\n\n  电脑复制的文字，手机秒收到！这个免费神器太好用了😭\n\n  ---\n  正文\n\n  谁懂啊！每天电脑和手机之间传一段文字，要么微信发给自己（聊天记录全乱），要么用备忘录来回切换，要么登一堆奇奇怪怪的云同步软件……\n\n  直到我发现（自己做了）一个不用安装、不用注册、打开浏览器就能用的跨设备剪贴板！\n\n  ---\n  它是干嘛的？\n\n  一句话：把文字从一台设备\"扔\"到另一台设备。\n\n  1️⃣电脑上打开网页，粘贴要传的文字\n  2️⃣手机扫码（或复制链接）\n  3️⃣文字直接出现在手机上，复制即用\n\n  全程不到 30 秒。没有下载、没有登录、没有广告。\n\n  ---\n  最爽的几个点：\n\n  ✅ 零安装：有浏览器就能用，手机电脑平板都行\n  ✅ 不用登录：不需要手机号，不需要邮箱，不需要密码\n  ✅ 实时同步：粘贴完约 1 秒自动发送，另一边马上看到\n  ✅ 隐私安全：数据在你自己的服务器上，不经过第三方\n  ✅ 自动清理：20 天后自动过期，不占空间不堆积\n\n  ---\n  适合这些场景：\n\n  📱 手机上看了一篇文章链接，想发到电脑继续看\n  💻 电脑上写好的一段代码，想发到手机上粘贴用\n  🔗 两台电脑之间传一段配置、命令或密码\n  👥 临时分享给同事，大家一起往同一个房间贴东西\n\n  ---\n  怎么用？\n\n  GitHub 搜 cloud-clipboard，clone 下来 3 条命令启动：\n\n  pip install -r requirements.txt\n  python app.py\n\n  默认跑在本地 http://127.0.0.1:5000，局域网内其他设备也能访问。\n\n  ---\n  开源免费，有服务器就能部署。有 VPS 或者 NAS 的可以自己搭一个，真的比各种云同步方便太多了。\n\n  ---\n  #效率工具 #程序员日常 #跨设备传输 #剪贴板 #开源项目 #实用工具 #手机电脑传文件 #打工人必备 #神器分享 #GitHub开源",
+      "created_at": "2026-04-07T07:35:31.698098+00:00"
+    },
+    {
+      "id": "b0cddf7b",
+      "content": "https://jisuchuan.com/69d4b15575ba295834",
+      "created_at": "2026-04-07T07:25:15.800748+00:00"
+    },
+    {
+      "id": "f017e4db",
+      "content": "https://jisuchuan.com/69d4b0ceecfb473791",
+      "created_at": "2026-04-07T07:23:12.487638+00:00"
+    },
+    {
+      "id": "ef69ef85",
+      "content": "2026-if",
+      "created_at": "2026-04-07T07:23:02.990751+00:00"
+    },
+    {
+      "id": "2d407054",
+      "content": "vless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@104.19.56.240:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@8.39.125.26:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@172.64.147.12:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@8.39.125.99:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@198.41.223.155:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@173.245.59.105:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@162.159.153.219:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@173.245.59.51:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@8.39.125.211:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@104.26.3.97:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@8.35.211.95:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@104.26.8.52:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@104.18.37.41:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@172.67.72.106:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@172.67.75.111:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@108.162.198.225:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@104.18.41.129:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@198.41.223.128:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@104.19.33.25:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@172.64.229.92:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@104.19.41.103:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@104.18.42.189:8443?path=%2F&security=tls&encryption=none&insecure=0&host=qnmlgb.ccwu.cc&fp=chrome&type=ws&allowInsecure=0&sni=qnmlgb.ccwu.cc#CF%E5%AE%98%E6%96%B9%E4%BC%98%E9%80%89\nvless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@162.159.38.",
+      "created_at": "2026-04-07T06:18:37.059991+00:00"
+    },
+    {
+      "id": "b94dc18b",
+      "content": "https://qnmlgb.ccwu.cc/sub?token=c93b48c5b5ac3112f38083551ca1d73f&clash",
+      "created_at": "2026-04-07T06:17:49.191702+00:00"
+    },
+    {
+      "id": "fa8d088d",
+      "content": "model_provider = \"OpenAI\"\nmodel = \"gpt-5.4\"\nreview_model = \"gpt-5.4\"\nmodel_reasoning_effort = \"high\"\ndisable_response_storage = true\nnetwork_access = \"enabled\"\nwindows_wsl_setup_acknowledged = true\nmodel_context_window = 1000000\nmodel_auto_compact_token_limit = 400000\n\n[model_providers.OpenAI]\nname = \"OpenAI\"\nbase_url = \"https://sub.devbin.de\"\nwire_api = \"responses\"\nrequires_openai_auth = true\n\n{\n  \"OPENAI_API_KEY\": \"sk-bec680ab1dc3b836da99a4b1387803545a326aac508a2f84ca4a15b25dfd98be\"\n}",
+      "created_at": "2026-04-07T03:41:44.576199+00:00"
+    },
+    {
+      "id": "3c801446",
+      "content": "pan.baidu.com\r\ncodex.txt\r\nurl: https://free.9e.nz/\r\nkey: sk-5c9b2acb7ef9f4bf2b60c66020a0522dOe99a ea411bc5956cOb6e7faf1e21a41\r\nhttps://sub.hdd.sb/\r\nsk-772abbc47d299172452298cf06fb9621de929be6e7ff7af667c8ad37a87a742e\r\nbase_urI = \"https://n.39.la\"\r\n\"OPENAI API KEY\":\"sk-73907e168accb032c205ed29f715e63aa655ec1a79ec4253bb50d8c3fd33e1b3\"\r\nbase_url = \"https:/lyinian.564779.xyz\"\r\n\"OPENAI_API_KEY\": \"sk-dab3ecb85cc277f6642e22d7359648bc77ce341e28b2f5bc7757deb7344a0b77\"   \r\nL  q : 1093254106",
+      "created_at": "2026-04-07T02:45:25.586830+00:00"
+    },
+    {
+      "id": "cd5d1f06",
+      "content": "📌 本期教程\n全程演示 Codex 注册机 + LuckyMail SDK接码平台绑定配置，手把手教你白嫖GPT账号\n\n⌚ 时间轴\n00:00 开场环境介绍\n00:32 Codex-Console部署\n01:54 配置LuckyMail SDK\n03:43 启动注册机\n05:13 配置web接入SDK\n06:00 验证测试\n07:00 Q1（add phone）\n07:58 Q2（api error）\n08:14 验证通过✅\n\n❓ 常见问题\nQ1: 登录弹出add phone如何解决？\nA: 节点异常触发，更换节点尝试即可，与IP纯净度无关\n\nQ2: LuckyMail SDK调用异常api error如何解决？\nA: 邮箱配置设置为除hotmail以外其他可用邮箱，或等官方补货\n\n📦 相关项目地址\n- 注册机UP@创悠社区  ：https://github.com/dou-jiang/codex-console\n- LuckyMail：https://mails.luckyous.com/00F020E3\n- SDK地址：https://mails.luckyous.com/uploads/LuckMailSdk-Python.zip\n\n💡 提示\n 该教程仅供学习研究，请遵守各平台服务条款\n\n如果对你有帮助，一键三连支持下~ 有问题评论区见！",
+      "created_at": "2026-04-06T23:35:55.833502+00:00"
+    },
+    {
+      "id": "3591e6c8",
+      "content": "https://jisuchuan.com/69d3816a0205186632",
+      "created_at": "2026-04-06T09:48:30.644759+00:00"
+    },
+    {
+      "id": "f9ea8368",
+      "content": "sk-sC6N3ws9veLpemBi3JQsD9AgNq4qeZbGyNxctjDPD0wL5vjw",
+      "created_at": "2026-04-06T02:19:20.793448+00:00"
+    },
+    {
+      "id": "fdd4be53",
+      "content": "accsmarket\nsms-activate.io/cn/freeNumbers\nhttps://yunduanxin.net/   \nhttps://smscode-receive.com/\nhttp://z-sms.com/https://www.receivesms.co\nhttps://freephonenum.com\nhttps://receive-smss.com",
+      "created_at": "2026-04-06T01:50:00.843960+00:00"
+    },
+    {
+      "id": "d0f1f48e",
+      "content": "warp://auth/desktop_redirect?refresh_token=AMf-vBy1fTbGSes0LBthwXUVyl4jmwKLfDktI4ZgxPEUCEGR8ngATUiWlUjObgB9cdEp0TROv38Xabj7zoboXQrwwbX1jxJM-oex-eKnc151YTUKStjmkFo8GoQg4Y-IrwCxl0HGbUg7mqD4yLZFVnQeiWWos71e45-ArRiqhFYPFE1A3DvpKyqqDLxMhDEQxWIq3QKMljB0w7zvnmg_MdFmDPW5pbXCHvcAQuA677j3WTX7zNd2uIk&is_onboarded=false&user_uid=KM0XxBV4szWcaydGeaeDltKTJHi1&deleted_anonymous_user=false&state=c9a6c005-1adc-48f0-9249-f38a285783c2",
+      "created_at": "2026-04-05T22:47:00.174389+00:00"
+    },
+    {
+      "id": "5fd0a009",
+      "content": "local wezterm = require 'wezterm'\nlocal act = wezterm.action\n\nlocal config = wezterm.config_builder()\n\n-- 定义一段内联的 PowerShell 脚本\n-- 它的作用是检查剪贴板是否有图片，如果有，就存到 TEMP 目录并打印出文件路径\nlocal ps_script = [[\nAdd-Type -AssemblyName System.Windows.Forms\nif ([System.Windows.Forms.Clipboard]::ContainsImage()) {\n    $image = [System.Windows.Forms.Clipboard]::GetImage()\n    $filename = \"wezterm_paste_$((Get-Date).ToString('yyyyMMdd_HHmmss')).png\"\n    $path = Join-Path $env:TEMP $filename\n    $image.Save($path, [System.Drawing.Imaging.ImageFormat]::Png)\n    Write-Output $path\n}\n]]\n\nconfig.keys = {\n  {\n    key = 'v',\n    mods = 'CTRL',\n    action = wezterm.action_callback(function(window, pane)\n      -- 在后台调用 PowerShell 执行脚本\n      -- 注意：必须加上 \"-STA\" (单线程单元) 参数，否则 Windows 剪贴板 API 无法工作\n      local success, stdout, stderr = wezterm.run_child_process({\n        \"powershell.exe\", \"-STA\", \"-NoProfile\", \"-NonInteractive\", \"-Command\", ps_script\n      })\n\n      -- 清理 PowerShell 输出的换行符和空格\n      local image_path = stdout and stdout:gsub(\"^%s*(.-)%s*$\", \"%1\") or \"\"\n\n      if success and image_path ~= \"\" then\n        -- 剪贴板里是图片且保存成功，将绝对路径输入到终端\n        -- 前后加空格，方便你直接跟在命令后面输入，比如 \"cat <路径>\"\n        pane:send_text(\" \" .. image_path .. \" \")\n      else\n        -- 剪贴板里是纯文本，执行正常的 Ctrl+V 粘贴\n        window:perform_action(act.PasteFrom 'Clipboard', pane)\n      end\n    end),\n  },\n}\n\nreturn config",
+      "created_at": "2026-04-05T14:08:30.135004+00:00"
+    },
+    {
+      "id": "a6ffc4a8",
+      "content": "https://qnmlgb.ccwu.cc/sub?token=c93b48c5b5ac3112f38083551ca1d73f&clash",
+      "created_at": "2026-04-05T07:18:45.784977+00:00"
+    },
+    {
+      "id": "534a244f",
+      "content": "vless://0c6f62ee-daf7-45ea-81a0-5e2c41d327e3@qnmlgb.ccwu.cc:443?security=tls&type=ws&host=qnmlgb.ccwu.cc&fp=chrome&sni=qnmlgb.ccwu.cc&path=%2F&encryption=none#edgetunnel",
+      "created_at": "2026-04-05T07:07:56.264502+00:00"
+    },
+    {
+      "id": "2055def5",
+      "content": "local wezterm = require 'wezterm'\nlocal config = wezterm.config_builder()\n\n-- ========== 🖥️ 基础设置 ==========\nconfig.default_prog = { 'pwsh', '-NoLogo' }\nconfig.color_scheme = 'Tokyo Night'\nconfig.font_size = 12.0\nconfig.front_end = 'OpenGL'\n\n-- ========== 🪟 核心：暴力透明方案 ==========\n-- 删掉 win32_system_backdrop，不看 Windows 操作系统的脸色了！\n-- 直接强制主窗口 85% 透明度\nconfig.window_background_opacity = 0.85\nconfig.text_background_opacity = 0.0\n\n-- ========== 🗂️ 标签栏重构：无按钮极简风 ==========\nconfig.use_fancy_tab_bar = true\nconfig.tab_max_width = 32\n\n-- 关键改动：使用 \"RESIZE\" 彻底隐藏右上角的三个按钮！\n-- 拖动方式：依然可以按住顶部标签栏空白处拖动\n-- 关闭方式：快捷键 Ctrl+W 或输入 exit\nconfig.window_decorations = \"RESIZE\"\n\n-- 深度美化标签栏，让它呈现半透明质感\nconfig.colors = {\n  tab_bar = {\n    background = 'rgba(0, 0, 0, 0)', -- 整体背景全透\n    \n    active_tab = {\n      bg_color = 'rgba(255, 255, 255, 0.1)', -- 微微发亮的当前标签\n      fg_color = '#c0caf5',\n    },\n    inactive_tab = {\n      bg_color = 'rgba(0, 0, 0, 0)',\n      fg_color = '#565f89',\n    },\n    inactive_tab_hover = {\n      bg_color = 'rgba(255, 255, 255, 0.05)',\n      fg_color = '#a9b1d6',\n    },\n    new_tab = {\n      bg_color = 'rgba(0, 0, 0, 0)',\n      fg_color = '#565f89',\n    },\n    new_tab_hover = {\n      bg_color = 'rgba(255, 255, 255, 0.1)',\n      fg_color = '#c0caf5',\n    },\n  }\n}\n\n-- ========== 🖼️ 窗口边距 ==========\nconfig.window_padding = {\n  left = 15,\n  right = 15,\n  top = 10,\n  bottom = 10,\n}\n\nconfig.default_cursor_style = 'BlinkingBar'\nconfig.cursor_blink_rate = 500\n\n-- ========== ⌨️ 快捷键 ==========\nlocal act = wezterm.action\nconfig.keys = {\n  { key = 't', mods = 'CTRL', action = act.SpawnTab('DefaultDomain') },\n  { key = 'w', mods = 'CTRL', action = act.CloseCurrentTab { confirm = false } }, -- 用这个关闭\n  { key = 'Tab', mods = 'CTRL', action = act.ActivateTabRelative(1) },\n}\n\nreturn config",
+      "created_at": "2026-04-05T01:38:23.333416+00:00"
+    },
+    {
+      "id": "ea0fe029",
+      "content": "local wezterm = require 'wezterm'\nlocal config = wezterm.config_builder()\n\n-- ========== 🖥️ 基础设置 ==========\nconfig.default_prog = { 'pwsh', '-NoLogo' }\nconfig.color_scheme = 'Tokyo Night'\nconfig.font_size = 12.0\nconfig.front_end = 'OpenGL'\n\n-- ========== 🪟 核心：Win11 原生 Mica 材质 ==========\n-- 放弃不稳定的 Acrylic，改用 Win11 原生的 Mica（云母）\n-- Mica 不会像 Acrylic 那样模糊，而是透出桌面壁纸的色调，非常有质感且稳定\nconfig.win32_system_backdrop = 'Mica'\n\n-- 透明度稍微调高一点，Mica 材质下 0.7~0.85 质感最好\nconfig.window_background_opacity = 0.75\nconfig.text_background_opacity = 0.0\n\n-- ========== 🗂️ 标签栏重构：现代透明风 ==========\n-- 重新启用精致标签栏（解决字体挤压问题）\nconfig.use_fancy_tab_bar = true\nconfig.tab_max_width = 32\n\n-- 把丑陋的 Windows 标题栏去掉，把按钮集成进标签栏\nconfig.window_decorations = \"INTEGRATED_BUTTONS|RESIZE\"\n\n-- 强行把标签栏的背景变透明，融入下面的 Mica 背景中\nconfig.colors = {\n  tab_bar = {\n    -- 标签栏整体背景透明\n    background = 'rgba(0, 0, 0, 0)',\n    \n    -- 选中的当前标签（稍微带一点深色底，方便看清字）\n    active_tab = {\n      bg_color = 'rgba(40, 44, 52, 0.8)',\n      fg_color = '#c0caf5',\n    },\n    -- 没选中的标签（完全透明）\n    inactive_tab = {\n      bg_color = 'rgba(0, 0, 0, 0)',\n      fg_color = '#565f89',\n    },\n    -- 鼠标滑过未选中标签的效果\n    inactive_tab_hover = {\n      bg_color = 'rgba(255, 255, 255, 0.1)',\n      fg_color = '#a9b1d6',\n    },\n    -- 新建按钮\n    new_tab = {\n      bg_color = 'rgba(0, 0, 0, 0)',\n      fg_color = '#565f89',\n    },\n    new_tab_hover = {\n      bg_color = 'rgba(255, 255, 255, 0.1)',\n      fg_color = '#c0caf5',\n    },\n  }\n}\n\n-- ========== 🖼️ 窗口与排版调整 ==========\nconfig.window_padding = {\n  left = 15,\n  right = 15,\n  top = 10,\n  bottom = 10,\n}\n\nconfig.default_cursor_style = 'BlinkingBar'\nconfig.cursor_blink_rate = 500\n\n-- ========== ⌨️ 快捷键 ==========\nlocal act = wezterm.action\nconfig.keys = {\n  { key = 't', mods = 'CTRL', action = act.SpawnTab('DefaultDomain') },\n  { key = 'w', mods = 'CTRL', action = act.CloseCurrentTab { confirm = false } },\n  { key = 'Tab', mods = 'CTRL', action = act.ActivateTabRelative(1) },\n}\n\nreturn config",
+      "created_at": "2026-04-05T01:34:39.673430+00:00"
+    },
+    {
+      "id": "589767bc",
+      "content": "default_prog = { 'powershell.exe' }",
+      "created_at": "2026-04-04T14:12:50.906955+00:00"
+    },
+    {
+      "id": "970960d9",
+      "content": "仓库地址：https://github.com/huahuaid/HUAHUANVIM.git\nwezterm分支",
+      "created_at": "2026-04-04T13:57:13.928443+00:00"
+    },
+    {
+      "id": "69d65081",
+      "content": "local wezterm = require 'wezterm'\n-- 使用配置构建器，这是 WezTerm 推荐的做法\nlocal config = wezterm.config_builder()\n\n-------------------------\n-- 1. 字体显示设置\n-------------------------\n-- 这里填你电脑上安装好的 Nerd Font 字体名称\nconfig.font = wezterm.font 'JetBrainsMono Nerd Font'\nconfig.font_size = 11.5\n-- 开启连字效果（比如 != 会显示成 ≠）\nconfig.harfbuzz_features = { 'calt=1', 'clig=1', 'liga=1' }\n\n-------------------------\n-- 2. 颜色与主题\n-------------------------\n-- WezTerm 自带了 700 多款主题，这里直接使用目前非常火的 Catppuccin 护眼暗色\nconfig.color_scheme = 'Catppuccin Mocha'\n\n-------------------------\n-- 3. 模糊与透明效果 (Windows 核心美化)\n-------------------------\n-- 窗口透明度，0.0 是全透，1.0 是不透。0.85 刚刚好\nconfig.window_background_opacity = 0.85 \n-- 开启 Windows 原生的材质效果，可选 'Acrylic' (亚克力模糊) 或 'Mica' (云母，仅限 Win11)\nconfig.win32_system_backdrop = 'Acrylic' \n\n-------------------------\n-- 4. 窗口边缘与标签页美化\n-------------------------\n-- 隐藏 Windows 默认极其难看的宽大标题栏，只保留调整大小的功能\nconfig.window_decorations = \"RESIZE\" \n-- 开启 WezTerm 漂亮的原生标签页\nconfig.use_fancy_tab_bar = true\n-- 让终端周围留出一点空隙，文字不会紧贴着屏幕边缘，呼吸感更强\nconfig.window_padding = {\n  left = \"1cell\",\n  right = \"1cell\",\n  top = \"0.5cell\",\n  bottom = \"0.5cell\",\n}\n\n-------------------------\n-- 5. 默认终端核心\n-------------------------\n-- 使用 PowerShell 并隐藏启动时的版权信息\nconfig.default_prog = { 'powershell.exe', '-NoLogo' }\n\nreturn config",
+      "created_at": "2026-04-04T13:13:01.636420+00:00"
+    },
+    {
+      "id": "180c66df",
+      "content": "Alacritty",
+      "created_at": "2026-04-04T12:14:05.123965+00:00"
+    },
+    {
+      "id": "93e960d8",
+      "content": "https://open.bigmodel.cn/api/paas/v4",
+      "created_at": "2026-04-04T06:09:46.305356+00:00"
+    },
+    {
+      "id": "2d3bb2fc",
+      "content": "【妈妈驿站】取货码F1-2193，您有包裹9821881200374已到新屋村中区2栋-105圆通妈妈驿站",
+      "created_at": "2026-04-02T01:05:14.748118+00:00"
+    },
+    {
+      "id": "87ac48df",
+      "content": "https://sub2api.cc/login",
+      "created_at": "2026-04-02T00:50:15.888782+00:00"
+    },
+    {
+      "id": "2b5690a5",
+      "content": "7cb6a6eb518699b1ded8b75eef202a76",
+      "created_at": "2026-04-02T00:50:13.608716+00:00"
+    },
+    {
+      "id": "afbe6992",
+      "content": "https://103.200.216.100/proxy?url=https%3A%2F%2Fxn--wtq35pfyd55o.co%2Fanswer%2Fland%2F892ba444516fba5cde93522b1a93eed9",
+      "created_at": "2026-04-01T14:57:16.174644+00:00"
+    },
+    {
+      "id": "02e42a36",
+      "content": "82f6619893e04bc6a2ddbf10dd147dcf.Nn3QO1cZ7P9JNmpE",
+      "created_at": "2026-04-01T14:06:39.947819+00:00"
+    },
+    {
+      "id": "b4437e64",
+      "content": "+31 97058047285",
+      "created_at": "2026-04-01T13:58:44.838972+00:00"
+    },
+    {
+      "id": "675336f1",
+      "content": "https://jisuchuan.com/69ccff21da22830180",
+      "created_at": "2026-04-01T11:19:02.833643+00:00"
+    },
+    {
+      "id": "b7f68f5c",
+      "content": "https://build.nvidia.com/",
+      "created_at": "2026-04-01T08:30:43.963540+00:00"
+    },
+    {
+      "id": "6e7157e1",
+      "content": "https://github.com/weikma/claude-code-rebuilt",
+      "created_at": "2026-04-01T05:04:06.332109+00:00"
+    },
+    {
+      "id": "2af49864",
+      "content": "https://jisuchuan.com/69cc6e095fef757838",
+      "created_at": "2026-04-01T00:59:58.605931+00:00"
+    },
+    {
+      "id": "e931ef93",
+      "content": "D0021IDQKI1ITCG0000",
+      "created_at": "2026-03-31T14:15:31.619699+00:00"
+    },
+    {
+      "id": "d7334e4d",
+      "content": "2100103232662388114",
+      "created_at": "2026-03-31T14:15:17.711388+00:00"
+    },
+    {
+      "id": "de5bc75e",
+      "content": "OpenRouter",
+      "created_at": "2026-03-31T13:25:48.172154+00:00"
+    },
+    {
+      "id": "fc6b558f",
+      "content": "2afh571h6bln",
+      "created_at": "2026-03-31T07:55:44.164407+00:00"
+    },
+    {
+      "id": "2e7e692f",
+      "content": "Tempmail.lol",
+      "created_at": "2026-03-31T07:53:06.661994+00:00"
+    },
+    {
+      "id": "09b534cf",
+      "content": "gwenapologize@gmail.com",
+      "created_at": "2026-03-31T05:20:58.474970+00:00"
+    },
+    {
+      "id": "dffb6b7d",
+      "content": "intemqkbj@gmail.com",
+      "created_at": "2026-03-31T05:20:56.701075+00:00"
+    },
+    {
+      "id": "7fa72e5f",
+      "content": "https://authenticator.cursor.sh/radar-challenge/send?user_id=user_01KN153BW7H0HTT4C1M7YPE73T&state=%257B%2522returnTo%2522%253A%2522%252Fcn%252FloginDeepControl%253Fchallenge%253DcviohJtbn8hEkxM896SAgcNoLwLduI5IdtXtIb3ukJA%2526uuid%253D41e58558-3541-4829-aa59-5d0d986669f2%2526mode%253Dsignup%2522%252C%2522nonce%2522%253A%252252a60308-f20c-4736-ba1a-bdf27fa7f0b6%2522%257D&redirect_uri=https%3A%2F%2Fcursor.com%2Fapi%2Fauth%2Fcallback&authorization_session_id=01KN1518C8FE3ZVXVHF1ZEY0RS",
+      "created_at": "2026-03-31T05:19:20.480959+00:00"
+    },
+    {
+      "id": "e392963a",
+      "content": "sk-iChingFate_com",
+      "created_at": "2026-03-31T03:28:43.681558+00:00"
+    },
+    {
+      "id": "2808d7b7",
+      "content": "https://api.ichingfate.com",
+      "created_at": "2026-03-31T03:28:40.999092+00:00"
+    },
+    {
+      "id": "61e366c5",
+      "content": "https://gkd-subscription-667.pages.dev/gkd.json5",
+      "created_at": "2026-03-31T03:19:32.989513+00:00"
+    },
+    {
+      "id": "d2e4acd4",
+      "content": "xanayeb428@zaoverse.com",
+      "created_at": "2026-03-30T13:38:28.653086+00:00"
+    },
+    {
+      "id": "85b90c7d",
+      "content": "https://jisuchuan.com/69ca2bd957c4c64805",
+      "created_at": "2026-03-30T07:53:15.254346+00:00"
+    },
+    {
+      "id": "db181720",
+      "content": "21751590242",
+      "created_at": "2026-03-30T07:53:05.122632+00:00"
+    },
+    {
+      "id": "1211031b",
+      "content": "https://jisuchuan.com/69ca22dbdc56244856",
+      "created_at": "2026-03-30T07:14:41.778481+00:00"
+    },
+    {
+      "id": "171c0e92",
+      "content": "https://jisuchuan.com/69c93ca744f3c79920",
+      "created_at": "2026-03-29T14:52:29.784265+00:00"
+    },
+    {
+      "id": "4b2551d3",
+      "content": "import requests\nimport time\nimport random\nimport string\nimport urllib3\n\nurllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)\n\nURL = \"https://slvp.nxxbbf.com\"\nMAX_RETRIES = 5\nretry_count = 0\nauthorization = None\n\ndef generate_random_email():\n    username = ''.join(random.choices(string.ascii_lowercase + string.digits, k=12))\n    return f\"{username}@gmail.com\"\n\n\nbase_headers = {\n    'accept': 'application/json, text/plain, */*',\n    'accept-language': 'zh-CN,zh;q=0.9',\n    'content-language': 'zh-CN',\n    'priority': 'u=1, i',\n    'referer': URL,\n    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',\n}\n\n\npost_headers = base_headers.copy()\npost_headers.update({\n    'content-type': 'application/x-www-form-urlencoded',\n    'origin': URL,\n})\n\n\ndata_template = {\n    'password': '44444444',\n    'invite_code': '',\n    'email_code': '',\n}\n\n\nwhile retry_count < MAX_RETRIES and authorization is None:\n    retry_count += 1\n    email = generate_random_email()\n    data = data_template.copy()\n    data['email'] = email\n\n    try:\n        response = requests.post(f'{URL}/api/v1/passport/auth/register',\n                                 headers=post_headers, data=data, verify=False, timeout=10)\n        res = response.json()\n\n        # 检查邮箱是否已存在\n        if 'message' in res and '邮箱已在系统中存在' in res['message']:\n            print(\"邮箱已存在，生成新邮箱重试...\")\n            continue\n\n        # 检查是否注册成功\n        if 'data' in res and 'auth_data' in res['data']:\n            authorization = res['data']['auth_data']\n            \n            break\n        else:\n            print(f\"注册失败: {res}\")\n\n    except requests.exceptions.RequestException as e:\n        print(f\"网络请求错误: {e}\")\n    except ValueError as e:\n        print(f\"JSON解析错误: {e}\")\n\n# 如果注册成功，获取订阅URL\nif authorization:\n    # GET请求专用headers\n    get_headers = base_headers.copy()\n    get_headers['authorization'] = authorization\n\n    params = {\n        't': str(int(time.time() * 1000)),\n    }\n\n    try:\n        response = requests.get(f'{URL}/api/v1/user/getSubscribe',\n                                params=params, headers=get_headers, verify=False, timeout=10)\n        res = response.json()\n        subscribe_url = res.get('data', {}).get('subscribe_url')\n\n        if subscribe_url:\n            print(subscribe_url)\n        else:\n            print(f\"获取订阅URL失败: {res}\")\n\n    except requests.exceptions.RequestException as e:\n        print(f\"获取订阅URL时网络错误: {e}\")\n    except ValueError as e:\n        print(f\"解析订阅响应JSON错误: {e}\")\nelse:\n    print(f\"注册失败，已达最大重试次数 {MAX_RETRIES}\")",
+      "created_at": "2026-03-29T06:52:54.181321+00:00"
+    },
+    {
+      "id": "57bd8d4d",
+      "content": "sudo ss -tulnp | grep 你的端口",
+      "created_at": "2026-03-29T01:26:48.194334+00:00"
+    },
+    {
+      "id": "161fb349",
+      "content": "sudo systemctl daemon-reload\nsudo systemctl start cli-proxy\nsudo systemctl enable cli-proxy",
+      "created_at": "2026-03-29T01:06:10.159186+00:00"
+    },
+    {
+      "id": "e431c290",
+      "content": "[Unit]\nDescription=CLI Proxy API Service\nAfter=network.target\n\n[Service]\nType=simple\n# 修改为你的程序所在的绝对路径目录\nWorkingDirectory=/root/\n# 修改为你的程序绝对路径\nExecStart=/root/cli-proxy-api\nRestart=on-failure\nUser=root\n\n[Install]\nWantedBy=multi-user.target",
+      "created_at": "2026-03-29T01:06:01.524110+00:00"
+    },
+    {
+      "id": "05490e08",
+      "content": "sudo curl -L -A \"clash.meta\" -o /etc/mihomo/config.yaml \"你的订阅链接\"",
+      "created_at": "2026-03-29T00:30:12.138698+00:00"
+    },
+    {
+      "id": "fa45a02c",
+      "content": "find / -name \"mihomo-linux-amd64*\" 2>/dev/null",
+      "created_at": "2026-03-29T00:21:35.649215+00:00"
+    },
+    {
+      "id": "9ef9e4a1",
+      "content": "sudo dpkg -i mihomo-linux-amd64-alpha-7fdc122.deb",
+      "created_at": "2026-03-29T00:10:09.208239+00:00"
+    },
+    {
+      "id": "b075bbce",
+      "content": "https://github.com/MetaCubeX/mihomo/releases?hl=zh-CN",
+      "created_at": "2026-03-29T00:01:27.029248+00:00"
+    },
+    {
+      "id": "a34c0756",
+      "content": "CPA-Codex-Manager",
+      "created_at": "2026-03-28T11:59:50.282501+00:00"
+    },
+    {
+      "id": "24ab8efd",
+      "content": "CLIProxyAPI",
+      "created_at": "2026-03-28T11:59:30.282970+00:00"
+    },
+    {
+      "id": "7e7e1fe2",
+      "content": "echo '/swapfile none swap sw 0 0' >> /etc/fstab",
+      "created_at": "2026-03-28T11:48:52.957739+00:00"
+    },
+    {
+      "id": "cff252b5",
+      "content": "swapon /swapfile",
+      "created_at": "2026-03-28T11:48:24.448858+00:00"
+    },
+    {
+      "id": "48700787",
+      "content": "mkswap /swapfile",
+      "created_at": "2026-03-28T11:47:54.068622+00:00"
+    },
+    {
+      "id": "f4a2c9b8",
+      "content": "chmod 600 /swapfile",
+      "created_at": "2026-03-28T11:47:19.716981+00:00"
+    },
+    {
+      "id": "dd985bb7",
+      "content": "dd if=/dev/zero of=/swapfile bs=1M count=2048",
+      "created_at": "2026-03-28T11:46:49.947297+00:00"
+    },
+    {
+      "id": "0701f268",
+      "content": "/usr/local/bin/k3s-uninstall.sh",
+      "created_at": "2026-03-28T11:45:41.787244+00:00"
+    },
+    {
+      "id": "cb10db94",
+      "content": "ps aux --sort=-%mem | head -n 10",
+      "created_at": "2026-03-28T11:41:25.466873+00:00"
+    },
+    {
+      "id": "9ce52c66",
+      "content": "https://zeabur.com/api/magic-link/callback?code=PDOZ7bQ6fZWr4yhyHVZHddwOGN61-9DW&state=eyJyZWZlcnJhbENvZGUiOm51bGwsImlzQ2hpbmEiOmZhbHNlLCJjdXJyZW50VXJsIjoiaHR0cHM6Ly96ZWFidXIuY29tL3poLUNOL2xvZ2luIn0=",
+      "created_at": "2026-03-28T11:13:54.327412+00:00"
+    },
+    {
+      "id": "8e5cc5eb",
+      "content": "https://github.com/Maoleio/CPA-Codex-Manager",
+      "created_at": "2026-03-28T06:37:32.407706+00:00"
+    }
+  ]
+}

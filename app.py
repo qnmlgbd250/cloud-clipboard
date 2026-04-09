@@ -44,6 +44,7 @@ ROOM_TTL_HOURS = int(os.environ.get("ROOM_TTL_HOURS", "480"))
 EMPTY_ROOM_TTL_HOURS = int(os.environ.get("EMPTY_ROOM_TTL_HOURS", "24"))
 MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", "50000"))
 MAX_ITEMS_PER_ROOM = int(os.environ.get("MAX_ITEMS_PER_ROOM", "500"))
+MAX_ITEMS_PAGE_SIZE = int(os.environ.get("MAX_ITEMS_PAGE_SIZE", "100"))
 MAX_ROOMS = int(os.environ.get("MAX_ROOMS", "2000"))
 WRITE_RATE_LIMIT = int(os.environ.get("WRITE_RATE_LIMIT", "40"))
 WRITE_RATE_WINDOW_SECONDS = int(os.environ.get("WRITE_RATE_WINDOW_SECONDS", "60"))
@@ -121,6 +122,28 @@ def _get_request_room() -> str | None:
     if not room or room != raw_room or not _is_valid_room_name(room):
         return None
     return room
+
+
+def _get_optional_int_arg(
+    name: str,
+    *,
+    minimum: int = 0,
+    maximum: int | None = None,
+) -> int | None:
+    raw_value = request.args.get(name)
+    if raw_value in {None, ""}:
+        return None
+
+    try:
+        value = int(raw_value)
+    except (TypeError, ValueError):
+        raise ValueError(name) from None
+
+    if value < minimum:
+        raise ValueError(name)
+    if maximum is not None and value > maximum:
+        raise ValueError(name)
+    return value
 
 
 def _get_client_ip() -> str:
@@ -590,9 +613,36 @@ def get_items():
     if room is None:
         return _json_error("invalid room", 400)
 
+    try:
+        offset = _get_optional_int_arg("offset", minimum=0)
+        limit = _get_optional_int_arg("limit", minimum=1, maximum=MAX_ITEMS_PAGE_SIZE)
+    except ValueError as error:
+        if str(error) == "limit":
+            return _json_error(
+                f"limit 必须在 1 到 {MAX_ITEMS_PAGE_SIZE} 之间",
+                400,
+            )
+        return _json_error(f"{error} 参数无效", 400)
+
     state, _ = _load_active_room_state(room, touch_activity=True)
     items = list(state.get("items", []))
-    response = jsonify(items)
+
+    if offset is None and limit is None:
+        response = jsonify(items)
+        return _add_no_store_headers(response)
+
+    safe_offset = offset or 0
+    total = len(items)
+    paged_items = items[safe_offset : safe_offset + (limit or total)]
+    response = jsonify(
+        {
+            "items": paged_items,
+            "total": total,
+            "offset": safe_offset,
+            "limit": limit or total,
+            "has_more": safe_offset + len(paged_items) < total,
+        }
+    )
     return _add_no_store_headers(response)
 
 
