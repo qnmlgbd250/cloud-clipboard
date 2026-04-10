@@ -39,6 +39,9 @@ jobs:
           # 【注意】将 cd 后面的路径替换为你的实际路径
           script: |
             chown -R root:root /cloud-clipboard
+            chmod -R 777 /cloud-clipboard/data
+            mkdir -p /cloud-clipboard/uploads
+            chmod -R 777 /cloud-clipboard/uploads
             cd /cloud-clipboard
             # 停止旧容器
             docker-compose down
