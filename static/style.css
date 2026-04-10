@@ -25,9 +25,10 @@
   --success: #2fba68;
   --shadow: 0 1px 3px rgba(12, 26, 75, 0.08), 0 1px 2px rgba(12, 26, 75, 0.05);
   --shadow-lg: 0 16px 40px rgba(18, 39, 90, 0.12);
-  --page-gradient: radial-gradient(circle at top left, rgba(125, 187, 255, 0.26), transparent 34%),
-    radial-gradient(circle at top right, rgba(98, 208, 255, 0.18), transparent 30%),
-    linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+  --page-gradient: radial-gradient(ellipse 80% 50% at 20% 0%, rgba(125, 187, 255, 0.22), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 0%, rgba(98, 208, 255, 0.15), transparent),
+    radial-gradient(ellipse 50% 60% at 50% 100%, rgba(160, 125, 255, 0.08), transparent),
+    linear-gradient(180deg, #f8fbff 0%, #eef4ff 60%, #f0f0ff 100%);
   --header-bg: rgba(244, 248, 255, 0.18);
   --header-border: rgba(22, 119, 255, 0.05);
   --header-shadow: 0 6px 18px rgba(18, 39, 90, 0.02);
@@ -57,10 +58,12 @@ body {
   min-height: 100dvh;
   background: var(--page-gradient);
   background-color: var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", sans-serif;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 body.modal-open {
@@ -70,7 +73,7 @@ body.modal-open {
 #app {
   max-width: var(--max-width);
   margin: 0 auto;
-  padding: 0 16px 72px;
+  padding: 0 16px calc(72px + env(safe-area-inset-bottom, 0px));
 }
 
 .header {
@@ -121,11 +124,15 @@ body.modal-open {
   margin: 0;
   padding: 0;
   font-size: 1.2rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 800;
+  letter-spacing: -0.03em;
   line-height: 1.2;
-  color: var(--text);
-  background: transparent !important;
+  background: linear-gradient(135deg, #1677ff, #7c3aed, #1677ff);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: brandShimmer 8s ease infinite;
   background-color: transparent !important;
   border: 0 !important;
   border-radius: 0 !important;
@@ -136,6 +143,11 @@ body.modal-open {
   mix-blend-mode: normal;
   isolation: isolate;
   forced-color-adjust: none;
+}
+
+@keyframes brandShimmer {
+  0%, 100% { background-position: 0% center; }
+  50% { background-position: 200% center; }
 }
 
 .header-tools {
@@ -165,6 +177,16 @@ body.modal-open {
   box-shadow: 0 8px 18px rgba(22, 119, 255, 0.16);
 }
 
+.room-chip:active {
+  transform: scale(0.97);
+}
+
+.room-chip.copied {
+  border-color: rgba(47, 186, 104, 0.3);
+  background: linear-gradient(180deg, rgba(47, 186, 104, 0.12), rgba(52, 199, 89, 0.08));
+  color: var(--success);
+}
+
 .icon-btn {
   width: 42px;
   height: 42px;
@@ -184,6 +206,11 @@ body.modal-open {
 
 .icon-btn:hover {
   background: var(--accent-soft);
+  transform: scale(1.06);
+}
+
+.icon-btn:active {
+  transform: scale(0.94);
 }
 
 .share-section,
@@ -542,7 +569,8 @@ body.modal-open {
   align-items: center;
   min-height: 36px;
   font-size: 0.82rem;
-  font-weight: 500;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
 }
 
@@ -617,8 +645,8 @@ body.modal-open {
 .clip-item {
   border-radius: var(--radius);
   padding: 14px 16px;
-  transition: var(--transition);
-  animation: slideIn 0.22s ease;
+  transition: var(--transition), transform var(--transition);
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .clip-item-file {
@@ -628,18 +656,30 @@ body.modal-open {
 
 .clip-item:hover {
   box-shadow: 0 12px 30px rgba(18, 39, 90, 0.16);
+  transform: scale(1.005) translateY(-1px);
 }
 
 @keyframes slideIn {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-12px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
+
+.item-section-content .clip-item:nth-child(1) { animation-delay: 0.02s; }
+.item-section-content .clip-item:nth-child(2) { animation-delay: 0.04s; }
+.item-section-content .clip-item:nth-child(3) { animation-delay: 0.06s; }
+.item-section-content .clip-item:nth-child(4) { animation-delay: 0.08s; }
+.item-section-content .clip-item:nth-child(5) { animation-delay: 0.1s; }
+.item-section-content .clip-item:nth-child(6) { animation-delay: 0.12s; }
+.item-section-content .clip-item:nth-child(7) { animation-delay: 0.14s; }
+.item-section-content .clip-item:nth-child(8) { animation-delay: 0.16s; }
+.item-section-content .clip-item:nth-child(9) { animation-delay: 0.18s; }
+.item-section-content .clip-item:nth-child(10) { animation-delay: 0.2s; }
 
 .clip-content {
   font-size: 0.92rem;
@@ -1087,7 +1127,7 @@ body.modal-open {
 
 @media (max-width: 560px) {
   #app {
-    padding: 0 12px 60px;
+    padding: 0 12px calc(60px + env(safe-area-inset-bottom, 0px));
   }
 
   .header {
@@ -1108,8 +1148,10 @@ body.modal-open {
   }
 
   .icon-btn {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .share-card {
@@ -1149,6 +1191,7 @@ body.modal-open {
     text-align: center;
     outline: none;
     -webkit-tap-highlight-color: transparent;
+    min-height: 44px;
   }
 
   .file-dropzone,
@@ -1184,6 +1227,52 @@ body.modal-open {
 
   .clip-meta {
     gap: 10px;
+  }
+}
+
+@media (max-width: 380px) {
+  #app {
+    padding: 0 8px calc(48px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .header {
+    padding: 12px 0 8px;
+    gap: 8px;
+  }
+
+  .brand h1 {
+    font-size: 1rem;
+  }
+
+  .logo {
+    width: 30px;
+    height: 30px;
+  }
+
+  .room-chip {
+    padding: 8px 10px;
+    font-size: 0.86rem;
+  }
+
+  .icon-btn {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  .share-section,
+  .input-section,
+  .toolbar {
+    margin-bottom: 8px;
+  }
+
+  .input-section {
+    padding: 12px;
+  }
+
+  .clip-item {
+    padding: 10px 12px;
   }
 }
 
@@ -1248,6 +1337,121 @@ body::-webkit-scrollbar-corner,
   color: #fff;
 }
 
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mode-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .clip-item { animation: none !important; }
+}
+
+/* Empty state breathing animation */
+.empty-icon {
+  animation: emptyBreath 4s ease-in-out infinite;
+}
+
+@keyframes emptyBreath {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.05); opacity: 0.65; }
+}
+
+/* Toast left indicator */
+.toast {
+  position: relative;
+  padding-left: 22px;
+}
+
+.toast::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 60%;
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.toast.success::before {
+  background: var(--success);
+}
+
+.toast.error::before {
+  background: var(--danger);
+}
+
+/* File dropzone pulse animation */
+@keyframes dropPulse {
+  0%, 100% { opacity: 0.75; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+.file-dropzone.dragover .file-dropzone-icon {
+  animation: dropPulse 1.2s ease-in-out infinite;
+}
+
+/* Upload progress bar stripe animation */
+@keyframes progressStripe {
+  to { background-position: 16px 0; }
+}
+
+.upload-progress-value {
+  background: linear-gradient(90deg, #1482ff, #00a6ff);
+  background-size: 16px 16px;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 255, 255, 0.15) 4px,
+    rgba(255, 255, 255, 0.15) 8px
+  );
+  background-size: 16px 16px;
+  animation: progressStripe 0.8s linear infinite;
+}
+
+/* Button active states */
+.btn-primary:active {
+  transform: scale(0.97);
+}
+
+.btn-ghost:active {
+  transform: scale(0.96);
+}
+
+.btn-danger-solid:active {
+  transform: scale(0.97);
+}
+
+/* Clip action button active */
+.clip-action-btn:active {
+  transform: scale(0.95);
+}
+
+/* Expanded clip-content transition */
+.clip-content {
+  transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Content-visibility for sentinel performance */
+.load-more-sentinel {
+  content-visibility: auto;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0b1220;
@@ -1269,9 +1473,10 @@ body::-webkit-scrollbar-corner,
     --success: #54d98b;
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.32), 0 1px 2px rgba(0, 0, 0, 0.22);
     --shadow-lg: 0 18px 42px rgba(0, 0, 0, 0.35);
-    --page-gradient: radial-gradient(circle at top left, rgba(32, 98, 204, 0.24), transparent 34%),
-      radial-gradient(circle at top right, rgba(20, 143, 184, 0.16), transparent 28%),
-      linear-gradient(180deg, #0f1729 0%, #0b1220 100%);
+    --page-gradient: radial-gradient(ellipse 80% 50% at 20% 0%, rgba(32, 98, 204, 0.2), transparent),
+      radial-gradient(ellipse 60% 40% at 80% 0%, rgba(20, 143, 184, 0.12), transparent),
+      radial-gradient(ellipse 50% 60% at 50% 100%, rgba(100, 80, 200, 0.06), transparent),
+      linear-gradient(180deg, #0f1729 0%, #0b1220 60%, #100e1f 100%);
     --header-bg: rgba(11, 18, 32, 0.24);
     --header-border: rgba(99, 164, 255, 0.07);
     --header-shadow: 0 8px 20px rgba(2, 6, 23, 0.08);
@@ -1308,5 +1513,13 @@ body::-webkit-scrollbar-corner,
   .toast {
     background: rgba(234, 242, 255, 0.96);
     color: #0f172a;
+  }
+
+  .brand h1 {
+    background: linear-gradient(135deg, #63a4ff, #a78bfa, #63a4ff);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 }

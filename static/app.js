@@ -118,7 +118,11 @@ function bindEvents() {
   btnRefresh.addEventListener("click", () => loadItems({ manual: true, forceFresh: true, limit: getVisibleItemTarget() }));
   btnClear.addEventListener("click", openClearConfirmModal);
   btnNewRoom.addEventListener("click", openNewRoomModal);
-  roomBadge.addEventListener("click", () => copyText(window.location.href, "链接已复制"));
+  roomBadge.addEventListener("click", () => {
+    copyText(window.location.href, "链接已复制");
+    roomBadge.classList.add("copied");
+    window.setTimeout(() => roomBadge.classList.remove("copied"), 1500);
+  });
   btnModeText.addEventListener("click", () => setMode("text"));
   btnModeFile.addEventListener("click", () => setMode("file"));
   btnClearFile.addEventListener("click", () => clearSelectedFile(false));
