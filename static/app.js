@@ -44,7 +44,6 @@ const textComposer = $("#textComposer");
 const fileComposer = $("#fileComposer");
 const fileInput = $("#fileInput");
 const fileDropzone = $("#fileDropzone");
-const btnChooseFile = $("#btnChooseFile");
 const fileSelection = $("#fileSelection");
 const fileName = $("#fileName");
 const fileMeta = $("#fileMeta");
@@ -122,10 +121,6 @@ function bindEvents() {
   roomBadge.addEventListener("click", () => copyText(window.location.href, "链接已复制"));
   btnModeText.addEventListener("click", () => setMode("text"));
   btnModeFile.addEventListener("click", () => setMode("file"));
-  btnChooseFile.addEventListener("click", (event) => {
-    event.stopPropagation();
-    fileInput.click();
-  });
   btnClearFile.addEventListener("click", () => clearSelectedFile(false));
   btnUploadFile.addEventListener("click", uploadSelectedFile);
   fileInput.addEventListener("change", handleFileSelection);
@@ -404,7 +399,6 @@ async function uploadSelectedFile() {
   isUploading = true;
   let uploadCompleted = false;
   updateFileSelection();
-  setUploadProgress(0);
   try {
     const payload = await uploadFileWithProgress(selectedFile);
     uploadCompleted = true;
@@ -626,26 +620,15 @@ function renderItems(items) {
   }
   emptyState.style.display = "none";
   const fragment = document.createDocumentFragment();
-  fragment.appendChild(createItemSection(currentMode === "file" ? "文件列表" : "文字列表", displayItems));
+  fragment.appendChild(createItemSection(displayItems));
   itemList.replaceChildren(fragment);
   syncClearConfirmState(totalItems);
   updateLoadMoreState();
 }
 
-function createItemSection(title, items) {
+function createItemSection(items) {
   const section = document.createElement("section");
   section.className = "item-section";
-  const header = document.createElement("div");
-  header.className = "item-section-header";
-  const titleEl = document.createElement("h2");
-  titleEl.className = "item-section-title";
-  titleEl.textContent = title;
-  const countEl = document.createElement("span");
-  countEl.className = "item-section-count";
-  countEl.textContent = `当前已显示 ${items.length} 条`;
-  header.appendChild(titleEl);
-  header.appendChild(countEl);
-  section.appendChild(header);
   const content = document.createElement("div");
   content.className = "item-section-content";
   items.forEach((item) => content.appendChild(createItemElement(item)));

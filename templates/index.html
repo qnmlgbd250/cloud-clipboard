@@ -27,8 +27,7 @@
     <section class="share-section">
       <div class="share-card">
         <div class="share-copy">
-          <p class="share-label">扫码进入房间，或点击顶部房间号复制链接</p>
-          <p class="share-hint">文本和文件都会在当前房间内保留 20 天，适合临时跨设备传输。</p>
+          <p class="share-label">扫码或点击顶部房间号复制链接（20天有效）</p>
         </div>
         <div id="qrContainer" aria-label="当前房间二维码"></div>
       </div>
@@ -53,11 +52,11 @@
         <div class="input-mode-panel" id="fileComposer" hidden>
           <input id="fileInput" type="file" hidden>
           <div class="file-dropzone" id="fileDropzone" tabindex="0" role="button" aria-label="选择文件上传">
-            <div class="file-dropzone-copy">
-              <strong>选择文件或拖拽到这里</strong>
-              <span id="filePickerHint">单文件最大 100 MB，房间最多 30 个文件，不限制类型。</span>
-            </div>
-            <button class="btn btn-ghost btn-sm" id="btnChooseFile" type="button">选择文件</button>
+            <svg class="file-dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
           </div>
 
           <div class="file-selection" id="fileSelection" hidden>
