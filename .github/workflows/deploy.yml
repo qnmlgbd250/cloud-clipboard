@@ -38,6 +38,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           # 【注意】将 cd 后面的路径替换为你的实际路径
           script: |
+            chown -R root:root /cloud-clipboard
             cd /cloud-clipboard
             # 停止旧容器
             docker-compose down
