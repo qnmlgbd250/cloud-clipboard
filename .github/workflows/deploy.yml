@@ -26,7 +26,7 @@ jobs:
           # 【重要】排除不需要上传的文件，避免覆盖服务器上的敏感配置
           rm: false
           # 【注意】将下方的 target 替换为你 1Panel 服务器上存放该项目的实际绝对路径
-          target: "/opt/1panel/apps/my-flask-project"
+          target: "/cloud-clipboard"
 
       # 3. SSH 登录服务器并重新构建 Docker 镜像
       - name: Rebuild and Restart Docker
@@ -38,7 +38,7 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           # 【注意】将 cd 后面的路径替换为你的实际路径
           script: |
-            cd /opt/1panel/apps/my-flask-project
+            cd /cloud-clipboard
             # 停止旧容器
             docker-compose down
             # 重新构建并后台启动新容器
