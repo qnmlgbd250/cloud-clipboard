@@ -598,11 +598,9 @@ function updateLoadMoreState() {
   }
   itemFeedFooter.hidden = false;
   const loadedCount = currentItems.length;
-  const displayCount = getDisplayItems().length;
-  const modeLabel = getCurrentModeLabel();
   itemLoadStatus.textContent = loadedCount >= totalItems
-    ? `已加载全部 ${totalItems} 条，当前显示 ${displayCount} 条${modeLabel}`
-    : `已加载 ${loadedCount} / ${totalItems} 条，当前显示 ${displayCount} 条${modeLabel}`;
+    ? '已加载全部'
+    : `已加载 ${loadedCount} / ${totalItems} 条`;
 }
 
 function renderItems(items) {
