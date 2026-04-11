@@ -931,15 +931,27 @@ def clear_items():
     if room is None:
         return _json_error("invalid room", 400)
 
+    item_type = request.args.get("type", "").lower()
+    clear_only = item_type in ("file", "text")
+
     changed = False
     room_lock = _get_room_lock(room)
     with room_lock:
         state, exists, _ = _load_room_state(room)
         if exists and state.get("items"):
-            changed = True
-            for item in state.get("items", []):
-                _remove_file_storage(room, item)
-            state["items"] = []
+            if clear_only:
+                items_to_remove = [i for i in state.get("items", []) if i.get("type") == item_type]
+                if not items_to_remove:
+                    return jsonify({"ok": True}), 200
+                for item in items_to_remove:
+                    _remove_file_storage(room, item)
+                state["items"] = [i for i in state.get("items", []) if i.get("type") != item_type]
+                changed = True
+            else:
+                for item in state.get("items", []):
+                    _remove_file_storage(room, item)
+                state["items"] = []
+                changed = True
             _touch_room_write(state)
             _save_room_state(room, state, normalized=True)
 

@@ -12,17 +12,28 @@
   <link rel="apple-touch-icon" href="/static/icon.svg">
 </head>
 <body>
-  <div id="app">
-    <header class="header">
-      <div class="brand">
-        <span class="logo" aria-hidden="true"></span>
-        <h1>云剪贴板</h1>
+  <div class="app-window">
+    <div class="app-titlebar">
+      <div class="titlebar-left">
+        <div class="traffic-lights">
+          <span class="light light-red"></span>
+          <span class="light light-yellow"></span>
+          <span class="light light-green"></span>
+        </div>
       </div>
-      <div class="header-tools">
-        <button class="room-chip" id="roomBadge" type="button" title="点击复制链接"></button>
-        <button class="icon-btn new-room-btn" id="btnNewRoom" type="button" title="新建房间" aria-label="新建房间">+</button>
+      <div class="titlebar-center">
+        <span class="titlebar-appname">cloud-clipboard</span>
       </div>
-    </header>
+      <div class="titlebar-right">
+        <div class="titlebar-controls">
+          <button class="room-chip" id="roomBadge" type="button" title="点击复制链接"></button>
+          <button class="icon-btn new-room-btn" id="btnNewRoom" type="button" title="新建房间" aria-label="新建房间">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="app-body">
+    <div id="app">
 
     <section class="share-section">
       <div class="share-card">
@@ -83,7 +94,6 @@
     <div class="toolbar">
       <span class="item-count" id="itemCount">0 条记录</span>
       <div class="toolbar-right">
-        <button class="btn btn-ghost btn-sm" id="btnRefresh" type="button">刷新</button>
         <button class="btn btn-ghost btn-sm btn-danger" id="btnClear" type="button">清空</button>
       </div>
     </div>
@@ -169,6 +179,8 @@
     </div>
 
     <div class="toast-container" id="toastContainer"></div>
+  </div>
+  </div>
   </div>
 
   <script src="/static/app.js" data-room="{{ room_id }}"></script>

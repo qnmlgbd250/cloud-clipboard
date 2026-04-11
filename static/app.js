@@ -15,7 +15,6 @@ const compactPreviewQuery = window.matchMedia("(max-width: 560px)");
 const $ = (selector) => document.querySelector(selector);
 const inputSection = $("#inputSection");
 const inputArea = $("#inputArea");
-const btnRefresh = $("#btnRefresh");
 const btnClear = $("#btnClear");
 const btnNewRoom = $("#btnNewRoom");
 const itemList = $("#itemList");
@@ -115,7 +114,6 @@ function bindEvents() {
     }
   });
 
-  btnRefresh.addEventListener("click", () => loadItems({ manual: true, forceFresh: true, limit: getVisibleItemTarget() }));
   btnClear.addEventListener("click", openClearConfirmModal);
   btnNewRoom.addEventListener("click", openNewRoomModal);
   roomBadge.addEventListener("click", () => {
@@ -513,16 +511,18 @@ async function deleteItem(id, itemEl) {
 }
 
 function openClearConfirmModal() {
-  if (getCurrentItemCount() === 0) {
+  const currentCount = getCurrentItemCount();
+  if (currentCount === 0) {
     showToast("当前没有可清空的内容", "error");
     return;
   }
-  syncClearConfirmState(getCurrentItemCount());
+  syncClearConfirmState(currentCount);
   setModalOpen(clearConfirmModal, true);
 }
 
 async function confirmClearItems() {
-  if (getCurrentItemCount() === 0) {
+  const currentCount = getCurrentItemCount();
+  if (currentCount === 0) {
     syncClearConfirmState(0);
     showToast("当前没有可清空的内容", "error");
     return;
@@ -530,7 +530,7 @@ async function confirmClearItems() {
   isClearing = true;
   syncClearConfirmState();
   try {
-    const response = await fetch(buildApiUrl("/api/items/clear"), {
+    const response = await fetch(buildApiUrl("/api/items/clear", { params: { type: currentMode } }), {
       method: "POST",
       cache: "no-store",
       headers: { "Cache-Control": "no-cache" },
@@ -538,7 +538,8 @@ async function confirmClearItems() {
     if (!response.ok) throw new Error("清空失败");
     setModalOpen(clearConfirmModal, false);
     showToast("已清空", "success");
-    applyItems([], { total: 0, hasMore: false });
+    // Re-fetch to sync the updated state from server
+    loadItems({ forceFresh: true, limit: getVisibleItemTarget() });
   } catch {
     showToast("清空失败", "error");
   } finally {
@@ -548,7 +549,7 @@ async function confirmClearItems() {
 }
 
 function getCurrentItemCount() {
-  return totalItems;
+  return getDisplayItems(currentItems).length;
 }
 
 function getPreviewLimit() {
@@ -611,7 +612,7 @@ function renderItems(items) {
   currentItems = Array.isArray(items) ? items.slice() : [];
   const displayItems = getDisplayItems(currentItems);
   itemCount.textContent = currentMode === "file" ? `${displayItems.length} 个文件` : `${displayItems.length} 条文本`;
-  btnClear.disabled = totalItems === 0;
+  btnClear.disabled = displayItems.length === 0;
   if (displayItems.length === 0) {
     updateEmptyState();
     emptyState.style.display = "";
