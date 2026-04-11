@@ -596,16 +596,20 @@ function updateEmptyState() {
 }
 
 function updateLoadMoreState() {
-  if (totalItems === 0) {
+  const displayItems = getDisplayItems(currentItems);
+  if (displayItems.length === 0) {
     itemFeedFooter.hidden = true;
     itemLoadStatus.textContent = "";
     return;
   }
   itemFeedFooter.hidden = false;
-  const loadedCount = currentItems.length;
-  itemLoadStatus.textContent = loadedCount >= totalItems
+  const loadedCount = displayItems.length;
+  const totalDisplayItems = currentMode === "file"
+    ? currentItems.filter(i => i.type === "file").length
+    : currentItems.filter(i => i.type !== "file").length;
+  itemLoadStatus.textContent = loadedCount >= totalDisplayItems
     ? '已加载全部'
-    : `已加载 ${loadedCount} / ${totalItems} 条`;
+    : `已加载 ${loadedCount} / ${totalDisplayItems} 条`;
 }
 
 function renderItems(items) {
