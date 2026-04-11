@@ -1029,11 +1029,14 @@ def stream_items():
                             "ts": _isoformat(),
                         },
                     )
+        except GeneratorExit:
+            pass
         finally:
             _unregister_subscriber(room, subscriber)
 
     response = Response(stream_with_context(generate()), mimetype="text/event-stream")
     response.headers["X-Accel-Buffering"] = "no"
+    response.headers["Connection"] = "keep-alive"
     return _add_no_store_headers(response)
 
 

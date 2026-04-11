@@ -278,26 +278,6 @@ function areItemsEqual(prevItems, nextItems) {
   return prevItems.every((item, index) => fingerprintItem(item) === fingerprintItem(nextItems[index]));
 }
 
-function detectItemChanges(prevItems, nextItems) {
-  if (!Array.isArray(prevItems) || !Array.isArray(nextItems)) return { added: nextItems || [], removed: [], unchanged: [] };
-  const prevMap = new Map();
-  prevItems.forEach(item => prevMap.set(item.id, item));
-  const nextIds = new Set();
-  const added = [], removed = [], unchanged = [];
-  nextItems.forEach(item => {
-    nextIds.add(item.id);
-    if (prevMap.has(item.id) && fingerprintItem(prevMap.get(item.id)) === fingerprintItem(item)) {
-      unchanged.push(item);
-    } else {
-      added.push(item);
-    }
-  });
-  prevItems.forEach(item => {
-    if (!nextIds.has(item.id)) removed.push(item);
-  });
-  return { added, removed, unchanged };
-}
-
 function getVisibleItemTarget() {
   return Math.max(currentItems.length, ITEMS_PAGE_SIZE);
 }
@@ -319,18 +299,17 @@ function applyItems(items, { total = items.length, hasMore = false } = {}) {
   if (areItemsEqual(currentItems, nextItems) && totalItems === nextTotal && hasMoreItems === nextHasMore) return false;
   totalItems = nextTotal;
   hasMoreItems = nextHasMore;
-  // For small changes, patch the DOM incrementally instead of full re-render
-  const { added, removed } = detectItemChanges(currentItems, nextItems);
-  const smallChange = added.length + removed.length <= 2;
+  // Quick diff: if only one item differs, do incremental DOM patch
+  const changes = quickDiff(currentItems, nextItems);
   currentItems = nextItems.slice();
-  if (smallChange && itemList.children.length > 0) {
-    patchItemDOM(added, removed);
+  if (changes.op !== "full" && itemList.children.length > 0) {
+    patchItemDOM(changes);
   } else {
     renderItems(nextItems);
     return true;
   }
   // Update count and state
-  const displayItems = getDisplayItems(currentItems);
+  const displayItems = getCachedDisplayItems();
   itemCount.textContent = currentMode === "file" ? `${displayItems.length} 个文件` : `${displayItems.length} 条文本`;
   btnClear.disabled = displayItems.length === 0;
   syncClearConfirmState(totalItems);
@@ -338,8 +317,25 @@ function applyItems(items, { total = items.length, hasMore = false } = {}) {
   return true;
 }
 
-function patchItemDOM(added, removed) {
-  removed.forEach(item => {
+function quickDiff(prev, next) {
+  if (!Array.isArray(prev) || !Array.isArray(next)) return { op: "full" };
+  const prevMap = new Map();
+  for (const i of prev) prevMap.set(i.id, i);
+  const nextIds = new Set();
+  const removed = [];
+  for (const i of next) nextIds.add(i.id);
+  for (const i of prev) if (!nextIds.has(i.id)) removed.push(i);
+  const added = [];
+  for (const i of next) {
+    if (!prevMap.has(i.id)) { added.push(i); continue; }
+    if (fingerprintItem(prevMap.get(i.id)) !== fingerprintItem(i)) return { op: "full" };
+  }
+  if (added.length + removed.length > 2) return { op: "full" };
+  return { op: "patch", added, removed };
+}
+
+function patchItemDOM(changes) {
+  changes.removed.forEach(item => {
     const el = itemList.querySelector(`[data-id="${CSS.escape(item.id)}"]`);
     if (el) el.remove();
   });
@@ -347,16 +343,14 @@ function patchItemDOM(added, removed) {
   itemList.querySelectorAll(".item-section").forEach(section => {
     if (!section.querySelector(".clip-item")) section.remove();
   });
-  added.forEach(item => {
+  changes.added.forEach(item => {
     const display = currentMode === "file" ? item.type === "file" : item.type !== "file";
     if (!display) return;
     const section = itemList.querySelector(".item-section");
     const content = section?.querySelector(".item-section-content");
     if (content) {
-      // Insert at top — items are sorted newest-first
       content.insertBefore(createItemElement(item), content.firstChild);
     } else if (itemList.querySelector("#emptyState")) {
-      // Was showing empty state, need full re-render
       renderItems(currentItems);
     }
   });
@@ -689,9 +683,7 @@ function updateLoadMoreState() {
   }
   itemFeedFooter.hidden = false;
   const loadedCount = displayItems.length;
-  const totalDisplayItems = currentMode === "file"
-    ? currentItems.filter(i => i.type === "file").length
-    : currentItems.filter(i => i.type !== "file").length;
+  const totalDisplayItems = currentItems.length;
   itemLoadStatus.textContent = loadedCount >= totalDisplayItems
     ? '已加载全部'
     : `已加载 ${loadedCount} / ${totalDisplayItems} 条`;
@@ -713,7 +705,13 @@ function renderItems(items) {
   }
   emptyState.style.display = "none";
   const fragment = document.createDocumentFragment();
-  fragment.appendChild(createItemSection(displayItems));
+  const section = document.createElement("section");
+  section.className = "item-section";
+  const content = document.createElement("div");
+  content.className = "item-section-content";
+  displayItems.forEach((item) => content.appendChild(createItemElement(item)));
+  section.appendChild(content);
+  fragment.appendChild(section);
   itemList.replaceChildren(fragment);
   syncClearConfirmState(totalItems);
   updateLoadMoreState();
@@ -728,6 +726,8 @@ function createItemSection(items) {
   section.appendChild(content);
   return section;
 }
+
+// Kept for potential external use; renderItems now inlines this for perf.
 
 function createItemElement(item) {
   const wrapper = document.createElement("div");
@@ -1062,6 +1062,8 @@ function closeRealtimeSync() {
   if (!realtimeSource) return;
   realtimeSource.close();
   realtimeSource = null;
+  if (itemsChangedTimer) { window.clearTimeout(itemsChangedTimer); itemsChangedTimer = null; }
+  pendingItemsChanged = false;
 }
 
 function scheduleReconnect() {
