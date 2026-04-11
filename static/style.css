@@ -825,6 +825,9 @@ body.modal-open {
   cursor: pointer;
   transition: var(--transition);
   font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .clip-action-btn:hover {

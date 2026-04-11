@@ -57,6 +57,10 @@ let queuedLoadOptions = null;
 let realtimeSource = null;
 let reconnectTimer = null;
 let pollTimer = null;
+let lastReconnectAttempt = 0;
+const RECONNECT_COOLDOWN_MS = 10000;
+let pendingItemsChanged = false;
+let itemsChangedTimer = null;
 let activeModal = null;
 let lastFocusedElement = null;
 let isClearing = false;
@@ -68,6 +72,9 @@ let pendingAutoSend = false;
 let currentItems = [];
 let totalItems = 0;
 let hasMoreItems = false;
+let cachedDisplayItems = null;
+let cachedDisplayItemsVersion = 0;
+let lastItemsRef = null;
 let isLoadingMore = false;
 let loadMoreObserver = null;
 let isCompactPreview = compactPreviewQuery.matches;
@@ -262,9 +269,33 @@ function queueLoad(options = {}) {
   };
 }
 
+function fingerprintItem(item) {
+  return `${item.id}|${item.type}|${item.created_at}|${item.updated_at || ""}|${item.content != null ? String(item.content).length : item.size || 0}`;
+}
+
 function areItemsEqual(prevItems, nextItems) {
   if (!Array.isArray(prevItems) || !Array.isArray(nextItems) || prevItems.length !== nextItems.length) return false;
-  return prevItems.every((item, index) => JSON.stringify(item) === JSON.stringify(nextItems[index]));
+  return prevItems.every((item, index) => fingerprintItem(item) === fingerprintItem(nextItems[index]));
+}
+
+function detectItemChanges(prevItems, nextItems) {
+  if (!Array.isArray(prevItems) || !Array.isArray(nextItems)) return { added: nextItems || [], removed: [], unchanged: [] };
+  const prevMap = new Map();
+  prevItems.forEach(item => prevMap.set(item.id, item));
+  const nextIds = new Set();
+  const added = [], removed = [], unchanged = [];
+  nextItems.forEach(item => {
+    nextIds.add(item.id);
+    if (prevMap.has(item.id) && fingerprintItem(prevMap.get(item.id)) === fingerprintItem(item)) {
+      unchanged.push(item);
+    } else {
+      added.push(item);
+    }
+  });
+  prevItems.forEach(item => {
+    if (!nextIds.has(item.id)) removed.push(item);
+  });
+  return { added, removed, unchanged };
 }
 
 function getVisibleItemTarget() {
@@ -288,8 +319,47 @@ function applyItems(items, { total = items.length, hasMore = false } = {}) {
   if (areItemsEqual(currentItems, nextItems) && totalItems === nextTotal && hasMoreItems === nextHasMore) return false;
   totalItems = nextTotal;
   hasMoreItems = nextHasMore;
-  renderItems(nextItems);
+  // For small changes, patch the DOM incrementally instead of full re-render
+  const { added, removed } = detectItemChanges(currentItems, nextItems);
+  const smallChange = added.length + removed.length <= 2;
+  currentItems = nextItems.slice();
+  if (smallChange && itemList.children.length > 0) {
+    patchItemDOM(added, removed);
+  } else {
+    renderItems(nextItems);
+    return true;
+  }
+  // Update count and state
+  const displayItems = getDisplayItems(currentItems);
+  itemCount.textContent = currentMode === "file" ? `${displayItems.length} 个文件` : `${displayItems.length} 条文本`;
+  btnClear.disabled = displayItems.length === 0;
+  syncClearConfirmState(totalItems);
+  updateLoadMoreState();
   return true;
+}
+
+function patchItemDOM(added, removed) {
+  removed.forEach(item => {
+    const el = itemList.querySelector(`[data-id="${CSS.escape(item.id)}"]`);
+    if (el) el.remove();
+  });
+  // Remove empty .item-section if no children left
+  itemList.querySelectorAll(".item-section").forEach(section => {
+    if (!section.querySelector(".clip-item")) section.remove();
+  });
+  added.forEach(item => {
+    const display = currentMode === "file" ? item.type === "file" : item.type !== "file";
+    if (!display) return;
+    const section = itemList.querySelector(".item-section");
+    const content = section?.querySelector(".item-section-content");
+    if (content) {
+      // Insert at top — items are sorted newest-first
+      content.insertBefore(createItemElement(item), content.firstChild);
+    } else if (itemList.querySelector("#emptyState")) {
+      // Was showing empty state, need full re-render
+      renderItems(currentItems);
+    }
+  });
 }
 
 function appendItems(items, { total = totalItems, hasMore = false } = {}) {
@@ -503,8 +573,8 @@ async function deleteItem(id, itemEl) {
     if (!response.ok) throw new Error("删除失败");
     showToast("已删除", "success");
     const nextTotal = Math.max(totalItems - 1, 0);
-    applyItems(currentItems.filter((item) => item.id !== id), { total: nextTotal, hasMore: currentItems.length - 1 < nextTotal });
-    if (nextTotal >= visibleTarget) loadItems({ forceFresh: true, limit: visibleTarget });
+    // Full re-fetch to get server-sorted data
+    loadItems({ forceFresh: true, limit: Math.max(visibleTarget, nextTotal) });
   } catch {
     showToast("删除失败", "error");
   }
@@ -549,7 +619,7 @@ async function confirmClearItems() {
 }
 
 function getCurrentItemCount() {
-  return getDisplayItems(currentItems).length;
+  return getCachedDisplayItems().length;
 }
 
 function getPreviewLimit() {
@@ -575,6 +645,21 @@ function getDisplayItems(items = currentItems) {
   return currentMode === "file" ? sourceItems.filter((item) => item.type === "file") : sourceItems.filter((item) => item.type !== "file");
 }
 
+function getCachedDisplayItems() {
+  if (cachedDisplayItems && lastItemsRef === currentItems && cachedDisplayItemsVersion === currentItems.length) {
+    return cachedDisplayItems;
+  }
+  cachedDisplayItems = getDisplayItems(currentItems);
+  cachedDisplayItemsVersion = currentItems.length;
+  lastItemsRef = currentItems;
+  return cachedDisplayItems;
+}
+
+function invalidateDisplayCache() {
+  cachedDisplayItems = null;
+  lastItemsRef = null;
+}
+
 function getCurrentModeLabel() {
   return currentMode === "file" ? "文件" : "文本";
 }
@@ -596,7 +681,7 @@ function updateEmptyState() {
 }
 
 function updateLoadMoreState() {
-  const displayItems = getDisplayItems(currentItems);
+  const displayItems = getCachedDisplayItems();
   if (displayItems.length === 0) {
     itemFeedFooter.hidden = true;
     itemLoadStatus.textContent = "";
@@ -614,7 +699,8 @@ function updateLoadMoreState() {
 
 function renderItems(items) {
   currentItems = Array.isArray(items) ? items.slice() : [];
-  const displayItems = getDisplayItems(currentItems);
+  invalidateDisplayCache();
+  const displayItems = getCachedDisplayItems();
   itemCount.textContent = currentMode === "file" ? `${displayItems.length} 个文件` : `${displayItems.length} 条文本`;
   btnClear.disabled = displayItems.length === 0;
   if (displayItems.length === 0) {
@@ -952,9 +1038,21 @@ function connectRealtimeStream() {
     stopPolling();
     if (!lastSuccessfulLoadAt || Date.now() - lastSuccessfulLoadAt > POLL_INTERVAL) loadItems({ forceFresh: true, limit: getVisibleItemTarget() });
   });
-  realtimeSource.addEventListener("items_changed", () => loadItems({ forceFresh: true, limit: getVisibleItemTarget() }));
+  realtimeSource.addEventListener("items_changed", () => {
+    pendingItemsChanged = true;
+    if (itemsChangedTimer) return;
+    itemsChangedTimer = window.setTimeout(() => {
+      itemsChangedTimer = null;
+      if (pendingItemsChanged) {
+        pendingItemsChanged = false;
+        loadItems({ forceFresh: true, limit: getVisibleItemTarget() });
+      }
+    }, 300);
+  });
   realtimeSource.onerror = () => {
     closeRealtimeSync();
+    if (Date.now() - lastReconnectAttempt < RECONNECT_COOLDOWN_MS) return;
+    lastReconnectAttempt = Date.now();
     startPolling();
     scheduleReconnect();
   };
