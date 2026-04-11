@@ -1195,7 +1195,7 @@ body.modal-open {
 .toast::before {
   content: '';
   position: absolute;
-  left: 14px;
+  left: 8px;
   top: 50%;
   transform: translateY(-50%);
   width: 8px;
