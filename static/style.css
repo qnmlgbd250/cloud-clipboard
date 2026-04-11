@@ -1174,7 +1174,7 @@ body.modal-open {
 }
 
 .toast {
-  padding: 10px 20px;
+  padding: 10px 20px 11px 25px;
   border-radius: 999px;
   background: var(--modal-glass-bg);
   backdrop-filter: blur(30px) saturate(180%);
