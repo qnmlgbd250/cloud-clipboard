@@ -434,41 +434,7 @@ async function sendTextItem({ successMessage = "已同步" } = {}) {
   }
 }
 
-async function uploadSelectedFile() {
-  if (!selectedFile) {
-    showToast("请先选择文件", "error");
-    return false;
-  }
-  if (selectedFile.size > FILE_SIZE_LIMIT_BYTES) {
-    showToast("文件超过 100 MB 限制", "error");
-    return false;
-  }
-  if (isUploading || isSending) return false;
-  isUploading = true;
-  let uploadCompleted = false;
-  updateFileSelection();
-  try {
-    const payload = await uploadFileWithProgress(selectedFile);
-    uploadCompleted = true;
-    selectedFile = null;
-    fileInput.value = "";
-    showToast("文件已上传", "success");
-    prependNewItem(payload);
-    return true;
-  } catch (error) {
-    showToast(error.message || "上传失败", "error");
-    return false;
-  } finally {
-    isUploading = false;
-    updateFileSelection();
-    if (uploadCompleted) {
-      setUploadProgress(100);
-      window.setTimeout(() => resetUploadProgress(), 420);
-    } else {
-      resetUploadProgress();
-    }
-  }
-}
+
 
 function uploadFileWithProgress(file) {
   return new Promise((resolve, reject) => {

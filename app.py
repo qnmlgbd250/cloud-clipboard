@@ -55,6 +55,7 @@ MAX_FILE_SIZE_BYTES = int(
     os.environ.get("MAX_FILE_SIZE_BYTES", str(100 * 1024 * 1024))
 )
 MAX_ROOMS = int(os.environ.get("MAX_ROOMS", "2000"))
+MAX_ROOM_CACHE_SIZE = int(os.environ.get("MAX_ROOM_CACHE_SIZE", "500"))
 WRITE_RATE_LIMIT = int(os.environ.get("WRITE_RATE_LIMIT", "40"))
 WRITE_RATE_WINDOW_SECONDS = int(os.environ.get("WRITE_RATE_WINDOW_SECONDS", "60"))
 ROOM_ACTIVITY_TOUCH_INTERVAL_SECONDS = int(
@@ -70,6 +71,7 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE_BYTES + (2 * 1024 * 1024)
 # ─── In-memory room cache ────────────────────────────────────────────
 ROOM_CACHE: dict[str, dict] = {}
 ROOM_CACHE_LOCK = Lock()
+ROOM_CACHE_ACCESS_ORDER: list[str] = []
 
 ROOM_SUBSCRIBERS: dict[str, set[Queue]] = defaultdict(set)
 ROOM_SUBSCRIBERS_LOCK = Lock()
@@ -77,6 +79,7 @@ ROOM_STATE_LOCKS: dict[str, Lock] = {}
 ROOM_STATE_LOCKS_LOCK = Lock()
 RATE_LIMIT_BUCKETS: dict[str, deque[float]] = defaultdict(deque)
 RATE_LIMIT_LOCK = Lock()
+RATE_LIMIT_CLEANUP_INTERVAL_SECONDS = 120
 STORAGE_CLEANUP_LOCK = Lock()
 LAST_STORAGE_CLEANUP_AT = 0.0
 BACKGROUND_CLEANUP_STARTED = False
@@ -382,6 +385,7 @@ def _load_room_state(room: str) -> tuple[dict, bool, bool]:
     with ROOM_CACHE_LOCK:
         cached = ROOM_CACHE.get(room)
     if cached is not None:
+        _touch_cache_key(room)
         return cached, True, False
 
     path = _data_path(room)
@@ -460,6 +464,7 @@ def _save_room_state(room: str, state: dict, *, normalized: bool = False) -> boo
         _delete_room_file(room)
         with ROOM_CACHE_LOCK:
             ROOM_CACHE.pop(room, None)
+            _remove_cache_key(room)
         return False
 
     fd, tmp_path = tempfile.mkstemp(dir=DATA_DIR, suffix=".tmp")
@@ -474,6 +479,8 @@ def _save_room_state(room: str, state: dict, *, normalized: bool = False) -> boo
 
     with ROOM_CACHE_LOCK:
         ROOM_CACHE[room] = normalized_state
+        _touch_cache_key(room)
+    _evict_room_cache()
     return True
 
 
@@ -500,6 +507,34 @@ def _load_active_room_state(
             _save_room_state(room, state, normalized=True)
 
         return state, exists
+
+
+def _evict_room_cache():
+    """Evict least-recently-used entries when ROOM_CACHE exceeds MAX_ROOM_CACHE_SIZE."""
+    with ROOM_CACHE_LOCK:
+        while len(ROOM_CACHE) > MAX_ROOM_CACHE_SIZE:
+            if not ROOM_CACHE_ACCESS_ORDER:
+                break
+            lru_key = ROOM_CACHE_ACCESS_ORDER.pop(0)
+            if lru_key in ROOM_CACHE:
+                ROOM_CACHE.pop(lru_key, None)
+
+
+def _touch_cache_key(room: str) -> None:
+    """Move cache key to the end of the access order (most recently used)."""
+    try:
+        ROOM_CACHE_ACCESS_ORDER.remove(room)
+    except ValueError:
+        pass
+    ROOM_CACHE_ACCESS_ORDER.append(room)
+
+
+def _remove_cache_key(room: str) -> None:
+    """Remove cache key from access order."""
+    try:
+        ROOM_CACHE_ACCESS_ORDER.remove(room)
+    except ValueError:
+        pass
 
 
 def _get_room_lock(room: str) -> Lock:
@@ -573,6 +608,17 @@ def _cleanup_storage(*, force: bool = False) -> None:
             for r in list(ROOM_CACHE.keys()):
                 if not _data_path(r).exists():
                     ROOM_CACHE.pop(r, None)
+                    _remove_cache_key(r)
+
+        # Clean up stale rate limit buckets (older than 2x the rate window)
+        with RATE_LIMIT_LOCK:
+            cutoff = time.monotonic() - WRITE_RATE_WINDOW_SECONDS
+            stale_keys = [
+                k for k, bucket in RATE_LIMIT_BUCKETS.items()
+                if not bucket or bucket[-1] <= cutoff
+            ]
+            for k in stale_keys:
+                RATE_LIMIT_BUCKETS.pop(k, None)
 
         LAST_STORAGE_CLEANUP_AT = now_monotonic
 
