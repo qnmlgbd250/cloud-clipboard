@@ -351,6 +351,7 @@ body.modal-open {
   background: var(--surface-muted);
   cursor: pointer;
   transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .file-dropzone:hover,
@@ -493,6 +494,7 @@ body.modal-open {
   transition: var(--transition);
   white-space: nowrap;
   font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn:disabled {
@@ -795,6 +797,7 @@ body.modal-open {
   color: var(--accent);
   cursor: pointer;
   transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .expand-btn:hover {
@@ -1026,6 +1029,7 @@ body.modal-open {
   border: 1px solid var(--border);
   cursor: pointer;
   transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .modal-close-btn:hover {
@@ -1066,6 +1070,7 @@ body.modal-open {
   transition: var(--transition);
   box-shadow: var(--shadow);
   font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .room-choice-btn:hover {
