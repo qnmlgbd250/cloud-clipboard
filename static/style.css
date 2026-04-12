@@ -536,6 +536,11 @@ body.modal-open {
   background: var(--danger-soft);
 }
 
+.btn-danger.confirming {
+  background: var(--danger);
+  color: #fff;
+}
+
 .btn-danger-solid {
   background: var(--danger);
   color: #fff;
@@ -963,10 +968,6 @@ body.modal-open {
   padding: 18px 20px 0;
 }
 
-.modal-header-danger {
-  align-items: flex-start;
-}
-
 .modal-hero {
   display: flex;
   align-items: flex-start;
@@ -1125,28 +1126,6 @@ body.modal-open {
   font-size: 0.76rem;
   color: var(--text-secondary);
   line-height: 1.5;
-}
-
-.confirm-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  border-radius: var(--radius-sm);
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 59, 48, 0.15);
-  background: var(--danger-soft);
-}
-
-.confirm-summary-label {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.confirm-summary-value {
-  font-size: 0.96rem;
-  font-weight: 700;
 }
 
 .modal-actions {

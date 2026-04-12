@@ -27,12 +27,8 @@ const itemLoadStatus = $("#itemLoadStatus");
 const loadMoreSentinel = $("#loadMoreSentinel");
 const roomBadge = $("#roomBadge");
 const qrContainer = $("#qrContainer");
-const clearConfirmModal = $("#clearConfirmModal");
 const newRoomModal = $("#newRoomModal");
 const toastContainer = $("#toastContainer");
-const clearConfirmCount = $("#clearConfirmCount");
-const btnCloseClearConfirm = $("#btnCloseClearConfirm");
-const btnConfirmClear = $("#btnConfirmClear");
 const btnCloseNewRoomModal = $("#btnCloseNewRoomModal");
 const btnCreateRandomRoom = $("#btnCreateRandomRoom");
 const btnCreateCustomRoom = $("#btnCreateCustomRoom");
@@ -121,7 +117,7 @@ function bindEvents() {
     }
   });
 
-  btnClear.addEventListener("click", openClearConfirmModal);
+  btnClear.addEventListener("click", handleClearClick);
   btnNewRoom.addEventListener("click", openNewRoomModal);
   roomBadge.addEventListener("click", () => {
     copyText(window.location.href, "链接已复制");
@@ -155,8 +151,6 @@ function bindEvents() {
     if (file) setSelectedFile(file);
   });
 
-  btnCloseClearConfirm.addEventListener("click", () => setModalOpen(clearConfirmModal, false));
-  btnConfirmClear.addEventListener("click", confirmClearItems);
   btnCloseNewRoomModal.addEventListener("click", () => setModalOpen(newRoomModal, false));
   btnCreateRandomRoom.addEventListener("click", goToRandomRoom);
   btnCreateCustomRoom.addEventListener("click", goToCustomRoom);
@@ -171,9 +165,6 @@ function bindEvents() {
     }
   });
 
-  clearConfirmModal.addEventListener("click", (event) => {
-    if (event.target === clearConfirmModal) setModalOpen(clearConfirmModal, false);
-  });
   newRoomModal.addEventListener("click", (event) => {
     if (event.target === newRoomModal) setModalOpen(newRoomModal, false);
   });
@@ -565,34 +556,48 @@ async function deleteItem(id, itemEl) {
       headers: { "Cache-Control": "no-cache" },
     });
     if (!response.ok) throw new Error("删除失败");
-    showToast("已删除", "success");
+    if (deleteButton) {
+      deleteButton.textContent = "已删除";
+      deleteButton.classList.remove("confirming");
+      deleteButton.dataset.confirming = "false";
+    }
     const nextTotal = Math.max(totalItems - 1, 0);
     // Full re-fetch to get server-sorted data
     loadItems({ forceFresh: true, limit: Math.max(visibleTarget, nextTotal) });
   } catch {
+    if (deleteButton) {
+      deleteButton.textContent = "删除";
+      deleteButton.classList.remove("confirming");
+      deleteButton.dataset.confirming = "false";
+    }
     showToast("删除失败", "error");
   }
 }
 
-function openClearConfirmModal() {
-  const currentCount = getCurrentItemCount();
-  if (currentCount === 0) {
-    showToast("当前没有可清空的内容", "error");
+function handleClearClick() {
+  if (btnClear.dataset.confirming !== "true") {
+    const currentCount = getCurrentItemCount();
+    if (currentCount === 0) return;
+    btnClear.dataset.confirming = "true";
+    btnClear.textContent = "确认清空";
+    btnClear.classList.add("confirming");
+    window.setTimeout(() => {
+      if (btnClear.dataset.confirming === "true") {
+        btnClear.dataset.confirming = "false";
+        btnClear.textContent = "清空";
+        btnClear.classList.remove("confirming");
+      }
+    }, 3000);
     return;
   }
-  syncClearConfirmState(currentCount);
-  setModalOpen(clearConfirmModal, true);
+  btnClear.textContent = "清空中...";
+  btnClear.classList.remove("confirming");
+  btnClear.dataset.confirming = "false";
+  btnClear.disabled = true;
+  doClearItems();
 }
 
-async function confirmClearItems() {
-  const currentCount = getCurrentItemCount();
-  if (currentCount === 0) {
-    syncClearConfirmState(0);
-    showToast("当前没有可清空的内容", "error");
-    return;
-  }
-  isClearing = true;
-  syncClearConfirmState();
+async function doClearItems() {
   try {
     const response = await fetch(buildApiUrl("/api/items/clear", { params: { type: currentMode } }), {
       method: "POST",
@@ -600,15 +605,19 @@ async function confirmClearItems() {
       headers: { "Cache-Control": "no-cache" },
     });
     if (!response.ok) throw new Error("清空失败");
-    setModalOpen(clearConfirmModal, false);
-    showToast("已清空", "success");
-    // Re-fetch to sync the updated state from server
+    btnClear.textContent = "已清空";
+    window.setTimeout(() => {
+      btnClear.textContent = "清空";
+    }, 1500);
     loadItems({ forceFresh: true, limit: getVisibleItemTarget() });
   } catch {
-    showToast("清空失败", "error");
+    btnClear.textContent = "清空失败";
+    window.setTimeout(() => {
+      btnClear.textContent = "清空";
+    }, 1500);
   } finally {
     isClearing = false;
-    syncClearConfirmState();
+    btnClear.disabled = false;
   }
 }
 
@@ -628,10 +637,7 @@ function buildPreviewText(content) {
 }
 
 function syncClearConfirmState(count = getCurrentItemCount()) {
-  const hasItems = count > 0;
-  clearConfirmCount.textContent = hasItems ? `${count} 条记录` : "暂无内容";
-  btnConfirmClear.disabled = isClearing || !hasItems;
-  btnConfirmClear.textContent = isClearing ? "清空中..." : "确认清空";
+  btnClear.disabled = count === 0;
 }
 
 function getDisplayItems(items = currentItems) {
@@ -854,7 +860,6 @@ async function copyText(text, successMessage = "已复制") {
     document.execCommand("copy");
     document.body.removeChild(textarea);
   }
-  showToast(successMessage, "success");
 }
 
 function showToast(message, type = "") {
