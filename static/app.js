@@ -641,15 +641,9 @@ function updateLoadMoreState() {
   const displayItems = getCachedDisplayItems();
   if (displayItems.length === 0) {
     itemFeedFooter.hidden = true;
-    itemLoadStatus.textContent = "";
     return;
   }
-  itemFeedFooter.hidden = false;
-  const loadedCount = displayItems.length;
-  const totalDisplayItems = currentItems.length;
-  itemLoadStatus.textContent = loadedCount >= totalDisplayItems
-    ? '已加载全部'
-    : `已加载 ${loadedCount} / ${totalDisplayItems} 条`;
+  itemFeedFooter.hidden = !hasMoreItems;
 }
 
 function renderItems(items) {
