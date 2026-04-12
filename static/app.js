@@ -39,11 +39,6 @@ const textComposer = $("#textComposer");
 const fileComposer = $("#fileComposer");
 const fileInput = $("#fileInput");
 const fileDropzone = $("#fileDropzone");
-const fileSelection = $("#fileSelection");
-const fileName = $("#fileName");
-const fileMeta = $("#fileMeta");
-const btnClearFile = $("#btnClearFile");
-const btnUploadFile = $("#btnUploadFile");
 const uploadProgress = $("#uploadProgress");
 const uploadProgressValue = $("#uploadProgressValue");
 const uploadProgressText = $("#uploadProgressText");
@@ -76,7 +71,6 @@ let loadMoreObserver = null;
 let isCompactPreview = compactPreviewQuery.matches;
 let lastForegroundSyncAt = 0;
 let lastSuccessfulLoadAt = 0;
-let selectedFile = null;
 let currentMode = "text";
 
 roomBadge.textContent = ROOM_ID;
@@ -86,7 +80,6 @@ bindEvents();
 setupLoadMoreObserver();
 loadQr();
 setMode("text");
-updateFileSelection();
 loadItems({ forceFresh: true });
 startRealtimeSync();
 
@@ -126,8 +119,6 @@ function bindEvents() {
   });
   btnModeText.addEventListener("click", () => setMode("text"));
   btnModeFile.addEventListener("click", () => setMode("file"));
-  btnClearFile.addEventListener("click", () => clearSelectedFile(false));
-  btnUploadFile.addEventListener("click", uploadSelectedFile);
   fileInput.addEventListener("change", handleFileSelection);
   fileDropzone.addEventListener("click", (event) => {
     if (event.target instanceof HTMLElement && event.target.closest("button")) return;
@@ -148,7 +139,7 @@ function bindEvents() {
     event.preventDefault();
     fileDropzone.classList.remove("dragover");
     const [file] = Array.from(event.dataTransfer?.files || []);
-    if (file) setSelectedFile(file);
+    if (file) uploadFile(file);
   });
 
   btnCloseNewRoomModal.addEventListener("click", () => setModalOpen(newRoomModal, false));
@@ -974,37 +965,29 @@ function setMode(mode) {
 
 function handleFileSelection(event) {
   const [file] = Array.from(event.target.files || []);
-  if (file) setSelectedFile(file);
-}
-
-function setSelectedFile(file) {
-  selectedFile = file || null;
-  updateFileSelection();
-}
-
-function clearSelectedFile(silent) {
-  selectedFile = null;
-  fileInput.value = "";
-  updateFileSelection();
-  if (!silent) showToast("已移除文件", "success");
-}
-
-function updateFileSelection() {
-  const hasFile = Boolean(selectedFile);
-  fileSelection.hidden = !hasFile;
-  if (!hasFile) {
-    fileName.textContent = "未选择文件";
-    fileMeta.textContent = "";
-    btnClearFile.disabled = true;
-    btnUploadFile.disabled = true;
-    btnUploadFile.textContent = "上传文件";
+  if (!file) return;
+  if (file.size > FILE_SIZE_LIMIT_BYTES) {
+    showToast("文件超过 100 MB 限制", "error");
+    fileInput.value = "";
     return;
   }
-  fileName.textContent = selectedFile.name || "未命名文件";
-  fileMeta.textContent = `${formatFileSize(selectedFile.size)}${selectedFile.size > FILE_SIZE_LIMIT_BYTES ? " · 超出 100 MB 限制" : ""}`;
-  btnClearFile.disabled = isUploading;
-  btnUploadFile.disabled = isUploading || selectedFile.size > FILE_SIZE_LIMIT_BYTES;
-  btnUploadFile.textContent = isUploading ? "上传中..." : "上传文件";
+  uploadFile(file);
+}
+
+async function uploadFile(file) {
+  if (isUploading || isSending) return;
+  isUploading = true;
+  try {
+    const payload = await uploadFileWithProgress(file);
+    showToast("文件已上传", "success");
+    prependNewItem(payload);
+  } catch (error) {
+    showToast(error.message || "上传失败", "error");
+  } finally {
+    isUploading = false;
+    fileInput.value = "";
+    resetUploadProgress();
+  }
 }
 
 function setUploadProgress(percent) {
