@@ -848,7 +848,7 @@ def add_item():
         items.insert(0, item)
         state["items"] = items
         _touch_room_write(state, now)
-        _save_room_state(room, state, normalized=True)
+        _save_room_state(room, state, normalized=False)
 
     _broadcast_room_update(room)
     response = jsonify(item)
@@ -932,7 +932,7 @@ def add_file():
         items.insert(0, file_item)
         state["items"] = items
         _touch_room_write(state, now)
-        _save_room_state(room, state, normalized=True)
+        _save_room_state(room, state, normalized=False)
 
     _broadcast_room_update(room)
     response = jsonify(file_item)

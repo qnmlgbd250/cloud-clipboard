@@ -279,17 +279,19 @@ function applyItems(items, { total = items.length, hasMore = false } = {}) {
   const nextTotal = Number.isFinite(total) ? Math.max(total, nextItems.length) : nextItems.length;
   const nextHasMore = Boolean(hasMore) && nextItems.length < nextTotal;
   if (areItemsEqual(currentItems, nextItems) && totalItems === nextTotal && hasMoreItems === nextHasMore) return false;
+  
+  const changes = quickDiff(currentItems, nextItems);
+  const wasEmpty = currentItems.length === 0;
+  currentItems = nextItems.slice();
   totalItems = nextTotal;
   hasMoreItems = nextHasMore;
-  // Quick diff: if only one item differs, do incremental DOM patch
-  const changes = quickDiff(currentItems, nextItems);
-  currentItems = nextItems.slice();
-  if (changes.op !== "full" && itemList.children.length > 0) {
+
+  if (changes.op !== "full" && !wasEmpty && itemList.querySelector(".item-section")) {
     patchItemDOM(changes);
   } else {
     renderItems(nextItems);
-    return true;
   }
+
   // Update count and state
   const displayItems = getCachedDisplayItems();
   itemCount.textContent = currentMode === "file" ? `${displayItems.length} 个文件` : `${displayItems.length} 条文本`;
@@ -312,7 +314,8 @@ function quickDiff(prev, next) {
     if (!prevMap.has(i.id)) { added.push(i); continue; }
     if (fingerprintItem(prevMap.get(i.id)) !== fingerprintItem(i)) return { op: "full" };
   }
-  if (added.length + removed.length > 2) return { op: "full" };
+  // Only patch if it's a single addition or removal to avoid complex order issues
+  if (added.length + removed.length > 1) return { op: "full" };
   return { op: "patch", added, removed };
 }
 
@@ -321,10 +324,7 @@ function patchItemDOM(changes) {
     const el = itemList.querySelector(`[data-id="${CSS.escape(item.id)}"]`);
     if (el) el.remove();
   });
-  // Remove empty .item-section if no children left
-  itemList.querySelectorAll(".item-section").forEach(section => {
-    if (!section.querySelector(".clip-item")) section.remove();
-  });
+  
   changes.added.forEach(item => {
     const display = currentMode === "file" ? item.type === "file" : item.type !== "file";
     if (!display) return;
@@ -332,9 +332,14 @@ function patchItemDOM(changes) {
     const content = section?.querySelector(".item-section-content");
     if (content) {
       content.insertBefore(createItemElement(item), content.firstChild);
-    } else if (itemList.querySelector("#emptyState")) {
+    } else {
       renderItems(currentItems);
     }
+  });
+
+  // Remove empty .item-section if no children left
+  itemList.querySelectorAll(".item-section").forEach(section => {
+    if (!section.querySelector(".clip-item")) section.remove();
   });
 }
 
