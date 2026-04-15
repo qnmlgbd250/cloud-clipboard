@@ -313,6 +313,14 @@ function quickDiff(prev, next) {
     if (fingerprintItem(prevMap.get(i.id)) !== fingerprintItem(i)) return { op: "full" };
   }
   if (added.length + removed.length > 2) return { op: "full" };
+  // Check if order of remaining items changed
+  // Build the expected order: prev items minus removed, plus added at their positions
+  const prevRemaining = prev.filter(i => nextIds.has(i.id));
+  const nextRemaining = next.filter(i => prevMap.has(i.id));
+  if (prevRemaining.length !== nextRemaining.length) return { op: "full" };
+  for (let i = 0; i < prevRemaining.length; i++) {
+    if (prevRemaining[i].id !== nextRemaining[i].id) return { op: "full" };
+  }
   return { op: "patch", added, removed };
 }
 
