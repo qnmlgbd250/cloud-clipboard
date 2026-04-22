@@ -298,7 +298,21 @@ function applyItems(items, { total = items.length, hasMore = false } = {}) {
   btnClear.disabled = displayItems.length === 0;
   syncClearConfirmState(totalItems);
   updateLoadMoreState();
+  updateAllTimeLabels();
   return true;
+}
+
+function updateAllTimeLabels() {
+  document.querySelectorAll(".clip-time").forEach(el => {
+    const createdAt = el.dataset.createdAt;
+    if (!createdAt) return;
+    const size = el.dataset.size;
+    if (size !== undefined) {
+      el.textContent = `${formatFileSize(size)} · ${formatTime(createdAt)}`;
+    } else {
+      el.textContent = formatTime(createdAt);
+    }
+  });
 }
 
 function quickDiff(prev, next) {
@@ -701,6 +715,8 @@ function createItemElement(item) {
   metaEl.className = "clip-meta";
   const timeEl = document.createElement("span");
   timeEl.className = "clip-time";
+  timeEl.dataset.createdAt = item.created_at;
+  if (item.type === "file") timeEl.dataset.size = item.size;
   timeEl.textContent = item.type === "file" ? `${formatFileSize(item.size)} · ${formatTime(item.created_at)}` : formatTime(item.created_at);
   metaEl.appendChild(timeEl);
   const actionsEl = document.createElement("div");
@@ -1039,3 +1055,5 @@ function stopPolling() {
   window.clearInterval(pollTimer);
   pollTimer = null;
 }
+
+window.setInterval(updateAllTimeLabels, 30000);
