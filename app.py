@@ -575,6 +575,11 @@ def _cleanup_storage(*, force: bool = False) -> None:
         if not force and now_monotonic - LAST_STORAGE_CLEANUP_AT < STORAGE_CLEANUP_INTERVAL_SECONDS:
             return
 
+        now_utc = _now_utc()
+        # Files not modified for this many hours are candidates for expiration check
+        # We use a buffer to be safe
+        mtime_threshold = now_utc - timedelta(hours=min(EMPTY_ROOM_TTL_HOURS, CONTENT_TTL_HOURS, ROOM_TTL_HOURS) * 0.8)
+
         for path in DATA_DIR.glob("*.json"):
             room = path.stem
             if not _is_valid_room_name(room):
@@ -584,14 +589,21 @@ def _cleanup_storage(*, force: bool = False) -> None:
                     pass
                 continue
 
+            # Optimization: Check file mtime before loading JSON
+            try:
+                mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+                if not force and mtime > mtime_threshold:
+                    continue
+            except (OSError, ValueError):
+                pass
+
             room_lock = _get_room_lock(room)
             with room_lock:
                 state, exists, changed = _load_room_state(room)
                 if not exists:
                     continue
 
-                now = _now_utc()
-                if _room_should_expire(state, now):
+                if _room_should_expire(state, now_utc):
                     _delete_room_file(room)
                     continue
 
@@ -632,9 +644,10 @@ def _room_count() -> int:
 
 
 def _ensure_room_capacity() -> None:
-    _cleanup_storage(force=True)
     if _room_count() >= MAX_ROOMS:
-        raise RoomCapacityError("可用房间数量已达上限，请稍后再试")
+        _cleanup_storage(force=True)
+        if _room_count() >= MAX_ROOMS:
+            raise RoomCapacityError("可用房间数量已达上限，请稍后再试")
 
 
 def _generate_room_name(length: int = ROOM_NAME_LENGTH) -> str:
