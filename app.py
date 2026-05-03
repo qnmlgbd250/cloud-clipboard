@@ -412,11 +412,8 @@ def _load_room_state(room: str) -> tuple[dict, bool, bool]:
 def _room_should_expire(state: dict, now: datetime | None = None) -> bool:
     now = now or _now_utc()
     last_activity_at = _parse_datetime(state.get("room", {}).get("last_activity_at")) or now
-    room_cutoff = now - timedelta(hours=ROOM_TTL_HOURS)
     empty_room_cutoff = now - timedelta(hours=EMPTY_ROOM_TTL_HOURS)
 
-    if last_activity_at <= room_cutoff:
-        return True
     if not state.get("items") and last_activity_at <= empty_room_cutoff:
         return True
     return False
