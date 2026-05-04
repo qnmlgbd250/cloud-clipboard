@@ -948,7 +948,7 @@ function handleFileSelection(event) {
   const [file] = Array.from(event.target.files || []);
   if (!file) return;
   if (file.size > FILE_SIZE_LIMIT_BYTES) {
-    showToast("文件超过 100 MB 限制", "error");
+    showToast("文件超过 500 MB 限制", "error");
     fileInput.value = "";
     return;
   }
