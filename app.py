@@ -430,6 +430,9 @@ def _delete_room_file(room: str) -> None:
         pass
     with ROOM_STATE_LOCKS_LOCK:
         ROOM_STATE_LOCKS.pop(room, None)
+    with ROOM_CACHE_LOCK:
+        ROOM_CACHE.pop(room, None)
+        _remove_cache_key(room)
 
 
 def _touch_room_activity(state: dict, now: datetime | None = None, *, force: bool = False) -> bool:
@@ -621,10 +624,6 @@ def _cleanup_storage(*, force: bool = False) -> None:
 
 
 def _room_count() -> int:
-    with ROOM_CACHE_LOCK:
-        cache_count = len(ROOM_CACHE)
-    if cache_count > 0:
-        return cache_count
     return sum(1 for path in DATA_DIR.glob("*.json") if _is_valid_room_name(path.stem))
 
 
