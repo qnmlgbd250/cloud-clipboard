@@ -2,7 +2,6 @@ const scriptEl = document.currentScript || document.querySelector("script[data-r
 const ROOM_ID = scriptEl?.dataset.room || "";
 const ITEMS_PAGE_SIZE = 20;
 const POLL_INTERVAL = 5000;
-const STREAM_RETRY_DELAY = 2000;
 const AUTO_SEND_DELAY = 1000;
 const FOREGROUND_SYNC_COOLDOWN_MS = 800;
 const FILE_SIZE_LIMIT_BYTES = 800 * 1024 * 1024;
@@ -48,8 +47,9 @@ let queuedLoadOptions = null;
 let realtimeSource = null;
 let reconnectTimer = null;
 let pollTimer = null;
-let lastReconnectAttempt = 0;
-const RECONNECT_COOLDOWN_MS = 10000;
+let reconnectAttempts = 0;
+const RECONNECT_BASE_DELAY = 1000;
+const RECONNECT_MAX_DELAY = 15000;
 let pendingItemsChanged = false;
 let itemsChangedTimer = null;
 let activeModal = null;
@@ -1004,6 +1004,7 @@ function connectRealtimeStream() {
   closeRealtimeSync();
   realtimeSource = new EventSource(buildApiUrl("/api/stream"));
   realtimeSource.addEventListener("ready", () => {
+    reconnectAttempts = 0;
     stopPolling();
     if (!lastSuccessfulLoadAt || Date.now() - lastSuccessfulLoadAt > POLL_INTERVAL) loadItems({ forceFresh: true, limit: getVisibleItemTarget() });
   });
@@ -1020,8 +1021,6 @@ function connectRealtimeStream() {
   });
   realtimeSource.onerror = () => {
     closeRealtimeSync();
-    if (Date.now() - lastReconnectAttempt < RECONNECT_COOLDOWN_MS) return;
-    lastReconnectAttempt = Date.now();
     startPolling();
     scheduleReconnect();
   };
@@ -1037,10 +1036,12 @@ function closeRealtimeSync() {
 
 function scheduleReconnect() {
   if (reconnectTimer) return;
+  const delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, reconnectAttempts), RECONNECT_MAX_DELAY);
+  reconnectAttempts++;
   reconnectTimer = window.setTimeout(() => {
     reconnectTimer = null;
     ensureRealtimeSync();
-  }, STREAM_RETRY_DELAY);
+  }, delay);
 }
 
 function startPolling() {

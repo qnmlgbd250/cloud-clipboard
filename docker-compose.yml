@@ -10,8 +10,8 @@ services:
     restart: unless-stopped
     environment:
       WEB_CONCURRENCY: "1"
-      GUNICORN_THREADS: "24"
-      GUNICORN_TIMEOUT: "120"
+      GUNICORN_THREADS: "128"
+      GUNICORN_TIMEOUT: "300"
       CONTENT_TTL_HOURS: "480"
       ROOM_TTL_HOURS: "480"
       EMPTY_ROOM_TTL_HOURS: "24"

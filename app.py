@@ -630,7 +630,27 @@ def _room_count() -> int:
 def _ensure_room_capacity() -> None:
     _cleanup_storage(force=True)
     if _room_count() >= MAX_ROOMS:
-        raise RoomCapacityError("可用房间数量已达上限，请稍后再试")
+        raise RoomCapacityError("系统房间数量已达上限，无法创建新房间")
+
+
+def _load_or_create_room(room: str) -> tuple[dict, bool]:
+    """Load room state; create on disk if first write.
+
+    Must be called while holding the room lock.
+    Returns (state, room_existed).
+    """
+    state, exists, _ = _load_room_state(room)
+    now = _now_utc()
+
+    if exists and _room_should_expire(state, now):
+        _delete_room_file(room)
+        state = _default_room_state(now)
+        exists = False
+
+    if not exists:
+        _ensure_room_capacity()
+
+    return state, exists
 
 
 def _generate_room_name(length: int = ROOM_NAME_LENGTH) -> str:
@@ -818,18 +838,10 @@ def add_item():
     if len(content) > MAX_CONTENT_LENGTH:
         return _json_error(f"内容过长，最多 {MAX_CONTENT_LENGTH} 个字符", 400)
 
-    if not _data_path(room).exists():
-        _ensure_room_capacity()
-
     room_lock = _get_room_lock(room)
     with room_lock:
-        state, exists, _ = _load_room_state(room)
+        state, _ = _load_or_create_room(room)
         now = _now_utc()
-
-        if exists and _room_should_expire(state, now):
-            _delete_room_file(room)
-            state = _default_room_state(now)
-            exists = False
 
         items = list(state.get("items", []))
         if len(items) >= MAX_ITEMS_PER_ROOM:
@@ -866,21 +878,13 @@ def add_file():
     if not original_filename:
         return _json_error("文件名无效", 400)
 
-    if not _data_path(room).exists():
-        _ensure_room_capacity()
-
     room_lock = _get_room_lock(room)
     tmp_path: Path | None = None
     file_item: dict | None = None
 
     with room_lock:
-        state, exists, _ = _load_room_state(room)
+        state, _ = _load_or_create_room(room)
         now = _now_utc()
-
-        if exists and _room_should_expire(state, now):
-            _delete_room_file(room)
-            state = _default_room_state(now)
-            exists = False
 
         items = list(state.get("items", []))
         if len(items) >= MAX_ITEMS_PER_ROOM:
@@ -1051,6 +1055,8 @@ def stream_items():
 
     def generate():
         try:
+            yield "retry: 1000\n\n"
+
             yield _sse_message(
                 "ready",
                 {
