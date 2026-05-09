@@ -942,6 +942,16 @@ function setMode(mode) {
     clearAutoSendTimer();
   }
   renderItems(currentItems);
+  autoLoadUntilDisplayItems();
+}
+
+async function autoLoadUntilDisplayItems() {
+  if (getCachedDisplayItems().length > 0 || !hasMoreItems || isLoadingMore) return;
+  let safety = 10;
+  while (safety-- > 0 && hasMoreItems && !isLoadingMore) {
+    const loaded = await loadMoreItems();
+    if (!loaded || getCachedDisplayItems().length > 0) break;
+  }
 }
 
 function handleFileSelection(event) {
