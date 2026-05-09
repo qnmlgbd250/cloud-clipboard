@@ -411,6 +411,8 @@ async function loadItems(options = {}) {
       const nextOptions = queuedLoadOptions;
       queuedLoadOptions = null;
       loadItems(nextOptions);
+    } else if (!isLoading && !isLoadingMore) {
+      autoLoadUntilDisplayItems();
     }
   }
 }
