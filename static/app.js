@@ -212,9 +212,14 @@ function getMinInputHeight() {
   return Number.isFinite(minHeight) ? minHeight : 180;
 }
 
+let autoResizeRaf = 0;
 function autoResize() {
-  inputArea.style.height = "auto";
-  inputArea.style.height = `${Math.max(getMinInputHeight(), inputArea.scrollHeight)}px`;
+  if (autoResizeRaf) return;
+  autoResizeRaf = requestAnimationFrame(() => {
+    autoResizeRaf = 0;
+    inputArea.style.height = "auto";
+    inputArea.style.height = `${Math.max(getMinInputHeight(), inputArea.scrollHeight)}px`;
+  });
 }
 
 function clearAutoSendTimer() {
@@ -302,17 +307,30 @@ function applyItems(items, { total = items.length, hasMore = false } = {}) {
   return true;
 }
 
+const visibleTimeLabels = new Set();
+const timeLabelObserver = new IntersectionObserver((entries) => {
+  for (const entry of entries) {
+    if (entry.isIntersecting) visibleTimeLabels.add(entry.target);
+    else visibleTimeLabels.delete(entry.target);
+  }
+});
+
+function observeTimeLabel(el) {
+  timeLabelObserver.observe(el);
+}
+
 function updateAllTimeLabels() {
-  document.querySelectorAll(".clip-time").forEach(el => {
+  const targets = visibleTimeLabels.size > 0 ? visibleTimeLabels : document.querySelectorAll(".clip-time");
+  for (const el of targets) {
     const createdAt = el.dataset.createdAt;
-    if (!createdAt) return;
+    if (!createdAt) continue;
     const size = el.dataset.size;
     if (size !== undefined) {
       el.textContent = `${formatFileSize(size)} · ${formatTime(createdAt)}`;
     } else {
       el.textContent = formatTime(createdAt);
     }
-  });
+  }
 }
 
 function quickDiff(prev, next) {
@@ -345,7 +363,7 @@ function patchItemDOM(changes) {
     const section = itemList.querySelector(".item-section");
     const content = section?.querySelector(".item-section-content");
     if (content) {
-      content.insertBefore(createItemElement(item), content.firstChild);
+      content.insertBefore(createItemElement(item, { animate: true }), content.firstChild);
     } else {
       renderItems(currentItems);
     }
@@ -707,9 +725,9 @@ function createItemSection(items) {
 
 // Kept for potential external use; renderItems now inlines this for perf.
 
-function createItemElement(item) {
+function createItemElement(item, { animate = false } = {}) {
   const wrapper = document.createElement("div");
-  wrapper.className = `clip-item${item.type === "file" ? " clip-item-file" : ""}`;
+  wrapper.className = `clip-item${item.type === "file" ? " clip-item-file" : ""}${animate ? " clip-item-enter" : ""}`;
   wrapper.dataset.id = item.id;
   if (item.type === "file") renderFileContent(wrapper, item);
   else renderTextContent(wrapper, item);
@@ -720,6 +738,7 @@ function createItemElement(item) {
   timeEl.dataset.createdAt = item.created_at;
   if (item.type === "file") timeEl.dataset.size = item.size;
   timeEl.textContent = item.type === "file" ? `${formatFileSize(item.size)} · ${formatTime(item.created_at)}` : formatTime(item.created_at);
+  observeTimeLabel(timeEl);
   metaEl.appendChild(timeEl);
   const actionsEl = document.createElement("div");
   actionsEl.className = "clip-actions";
