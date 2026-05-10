@@ -72,6 +72,7 @@ let isCompactPreview = compactPreviewQuery.matches;
 let lastForegroundSyncAt = 0;
 let lastSuccessfulLoadAt = 0;
 let currentMode = "text";
+let autoResizeRaf = 0;
 
 roomBadge.textContent = ROOM_ID;
 roomBadge.title = `点击复制房间链接：${ROOM_ID}`;
@@ -212,7 +213,6 @@ function getMinInputHeight() {
   return Number.isFinite(minHeight) ? minHeight : 180;
 }
 
-let autoResizeRaf = 0;
 function autoResize() {
   if (autoResizeRaf) return;
   autoResizeRaf = requestAnimationFrame(() => {
