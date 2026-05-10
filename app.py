@@ -50,7 +50,7 @@ EMPTY_ROOM_TTL_HOURS = int(os.environ.get("EMPTY_ROOM_TTL_HOURS", "24"))
 MAX_CONTENT_LENGTH = int(os.environ.get("MAX_CONTENT_LENGTH", "50000"))
 MAX_ITEMS_PER_ROOM = int(os.environ.get("MAX_ITEMS_PER_ROOM", "500"))
 MAX_ITEMS_PAGE_SIZE = int(os.environ.get("MAX_ITEMS_PAGE_SIZE", "100"))
-MAX_FILES_PER_ROOM = int(os.environ.get("MAX_FILES_PER_ROOM", "30"))
+MAX_FILES_PER_ROOM = int(os.environ.get("MAX_FILES_PER_ROOM", "300"))
 MAX_FILE_SIZE_BYTES = int(
     os.environ.get("MAX_FILE_SIZE_BYTES", str(800 * 1024 * 1024))
 )
