@@ -967,11 +967,12 @@ function setMode(mode) {
 }
 
 async function autoLoadUntilDisplayItems() {
-  if (getCachedDisplayItems().length > 0 || !hasMoreItems || isLoadingMore) return;
+  if (!hasMoreItems || isLoadingMore) return;
   let safety = 10;
   while (safety-- > 0 && hasMoreItems && !isLoadingMore) {
+    if (getCachedDisplayItems().length >= ITEMS_PAGE_SIZE) break;
     const loaded = await loadMoreItems();
-    if (!loaded || getCachedDisplayItems().length > 0) break;
+    if (!loaded) break;
   }
 }
 
