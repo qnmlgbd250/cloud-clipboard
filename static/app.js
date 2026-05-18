@@ -60,6 +60,7 @@ let isUploading = false;
 let isComposing = false;
 let autoSendTimer = null;
 let pendingAutoSend = false;
+let pendingDeletes = new Set();
 let currentItems = [];
 let totalItems = 0;
 let hasMoreItems = false;
@@ -415,6 +416,9 @@ async function loadItems(options = {}) {
     const payload = await response.json();
     const page = normalizeItemsPayload(payload, { offset, limit });
     lastSuccessfulLoadAt = Date.now();
+    if (pendingDeletes.size > 0) {
+      page.items = page.items.filter(i => !pendingDeletes.has(i.id));
+    }
     if (append) appendItems(page.items, { total: page.total, hasMore: page.hasMore });
     else applyItems(page.items, { total: page.total, hasMore: page.hasMore });
     return true;
@@ -1060,10 +1064,11 @@ function connectRealtimeStream() {
     }
 
     if (changeType === "delete" && data.item_id) {
+      if (itemsChangedTimer) { window.clearTimeout(itemsChangedTimer); itemsChangedTimer = null; }
+      pendingItemsChanged = false;
+      pendingDeletes.add(data.item_id);
       const idx = currentItems.findIndex(i => i.id === data.item_id);
       if (idx !== -1) {
-        if (itemsChangedTimer) { window.clearTimeout(itemsChangedTimer); itemsChangedTimer = null; }
-        pendingItemsChanged = false;
         currentItems.splice(idx, 1);
         totalItems = Math.max(0, totalItems - 1);
         renderItems(currentItems);
@@ -1071,8 +1076,9 @@ function connectRealtimeStream() {
         itemCount.textContent = currentMode === "file" ? `${displayItems.length} 个文件` : `${displayItems.length} 条文本`;
         btnClear.disabled = displayItems.length === 0;
         syncClearConfirmState(totalItems);
-        return;
       }
+      window.setTimeout(() => pendingDeletes.delete(data.item_id), 5000);
+      return;
     }
 
     if (changeType === "clear") {
