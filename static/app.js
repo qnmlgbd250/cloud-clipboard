@@ -963,8 +963,11 @@ function setMode(mode) {
   } else {
     clearAutoSendTimer();
   }
-  renderItems(currentItems);
-  autoLoadUntilDisplayItems();
+  currentItems = [];
+  totalItems = 0;
+  hasMoreItems = true;
+  renderItems([]);
+  loadItems({ forceFresh: true });
 }
 
 async function autoLoadUntilDisplayItems() {
