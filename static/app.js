@@ -562,9 +562,8 @@ async function deleteItem(id, itemEl) {
       deleteButton.classList.remove("confirming");
       deleteButton.dataset.confirming = "false";
     }
-    const nextTotal = Math.max(totalItems - 1, 0);
-    // Full re-fetch to get server-sorted data
-    loadItems({ forceFresh: true, limit: Math.max(visibleTarget, nextTotal) });
+    // Full re-fetch to get server-sorted data, maintaining the current view size
+    loadItems({ forceFresh: true, limit: visibleTarget });
   } catch {
     if (deleteButton) {
       deleteButton.textContent = "删除";
