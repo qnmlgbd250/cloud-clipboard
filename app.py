@@ -65,13 +65,14 @@ STORAGE_CLEANUP_INTERVAL_SECONDS = int(
     os.environ.get("STORAGE_CLEANUP_INTERVAL_SECONDS", "300")
 )
 MAX_SUBSCRIBERS_PER_ROOM = int(os.environ.get("MAX_SUBSCRIBERS_PER_ROOM", "100"))
+TRUST_PROXY = os.environ.get("TRUST_PROXY", "false").lower() in ("true", "1", "yes")
 
 app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE_BYTES + (2 * 1024 * 1024)
 
 # ─── In-memory room cache ────────────────────────────────────────────
 ROOM_CACHE: dict[str, dict] = {}
 ROOM_CACHE_LOCK = Lock()
-ROOM_CACHE_ACCESS_ORDER: list[str] = []
+ROOM_CACHE_ACCESS_ORDER: deque[str] = deque()
 
 ROOM_SUBSCRIBERS: dict[str, set[Queue]] = defaultdict(set)
 ROOM_SUBSCRIBERS_LOCK = Lock()
@@ -170,14 +171,15 @@ def _get_optional_int_arg(
 
 
 def _get_client_ip() -> str:
-    forwarded_for = request.headers.get("X-Forwarded-For", "")
-    if forwarded_for:
-        client_ip = forwarded_for.split(",")[0].strip()
-        if client_ip:
-            return client_ip
-    real_ip = request.headers.get("X-Real-IP", "").strip()
-    if real_ip:
-        return real_ip
+    if TRUST_PROXY:
+        forwarded_for = request.headers.get("X-Forwarded-For", "")
+        if forwarded_for:
+            client_ip = forwarded_for.split(",")[0].strip()
+            if client_ip:
+                return client_ip
+        real_ip = request.headers.get("X-Real-IP", "").strip()
+        if real_ip:
+            return real_ip
     return request.remote_addr or "unknown"
 
 
@@ -384,9 +386,9 @@ def _load_room_state(room: str) -> tuple[dict, bool, bool]:
     """
     with ROOM_CACHE_LOCK:
         cached = ROOM_CACHE.get(room)
-    if cached is not None:
-        _touch_cache_key(room)
-        return cached, True, False
+        if cached is not None:
+            _touch_cache_key(room)
+            return cached, True, False
 
     path = _data_path(room)
     if not path.exists():
@@ -462,9 +464,6 @@ def _save_room_state(room: str, state: dict, *, normalized: bool = False) -> boo
 
     if _room_should_expire(normalized_state, now):
         _delete_room_file(room)
-        with ROOM_CACHE_LOCK:
-            ROOM_CACHE.pop(room, None)
-            _remove_cache_key(room)
         return False
 
     fd, tmp_path = tempfile.mkstemp(dir=DATA_DIR, suffix=".tmp")
@@ -515,13 +514,13 @@ def _evict_room_cache():
         while len(ROOM_CACHE) > MAX_ROOM_CACHE_SIZE:
             if not ROOM_CACHE_ACCESS_ORDER:
                 break
-            lru_key = ROOM_CACHE_ACCESS_ORDER.pop(0)
+            lru_key = ROOM_CACHE_ACCESS_ORDER.popleft()
             if lru_key in ROOM_CACHE:
                 ROOM_CACHE.pop(lru_key, None)
 
 
 def _touch_cache_key(room: str) -> None:
-    """Move cache key to the end of the access order (most recently used)."""
+    """Move cache key to the end of the access order (most recently used). Must hold ROOM_CACHE_LOCK."""
     try:
         ROOM_CACHE_ACCESS_ORDER.remove(room)
     except ValueError:
@@ -530,7 +529,7 @@ def _touch_cache_key(room: str) -> None:
 
 
 def _remove_cache_key(room: str) -> None:
-    """Remove cache key from access order."""
+    """Remove cache key from access order. Must hold ROOM_CACHE_LOCK."""
     try:
         ROOM_CACHE_ACCESS_ORDER.remove(room)
     except ValueError:
@@ -694,12 +693,17 @@ def _unregister_subscriber(room: str, subscriber: Queue) -> None:
             ROOM_SUBSCRIBERS.pop(room, None)
 
 
-def _broadcast_room_update(room: str) -> None:
+def _broadcast_room_update(room: str, change_type: str = "update", item: dict | None = None, item_id: str | None = None) -> None:
     safe_room = _safe_room_name(room)
     payload = {
         "room": safe_room,
+        "change_type": change_type,
         "updated_at": _isoformat(),
     }
+    if item is not None:
+        payload["item"] = item
+    if item_id is not None:
+        payload["item_id"] = item_id
 
     with ROOM_SUBSCRIBERS_LOCK:
         subscribers = list(ROOM_SUBSCRIBERS.get(safe_room, ()))
@@ -801,22 +805,27 @@ def get_items():
             )
         return _json_error(f"{error} 参数无效", 400)
 
+    item_type = request.args.get("type", "").lower()
+
     state, _ = _load_active_room_state(room, touch_activity=True)
     items = list(state.get("items", []))
 
-    if offset is None and limit is None:
-        response = jsonify(items)
-        return _add_no_store_headers(response)
+    if item_type in ("text", "file"):
+        if item_type == "file":
+            items = [i for i in items if i.get("type") == "file"]
+        else:
+            items = [i for i in items if i.get("type") != "file"]
 
     safe_offset = offset or 0
     total = len(items)
-    paged_items = items[safe_offset : safe_offset + (limit or total)]
+    page_limit = limit or total
+    paged_items = items[safe_offset : safe_offset + page_limit]
     response = jsonify(
         {
             "items": paged_items,
             "total": total,
             "offset": safe_offset,
-            "limit": limit or total,
+            "limit": page_limit,
             "has_more": safe_offset + len(paged_items) < total,
         }
     )
@@ -858,7 +867,7 @@ def add_item():
         _touch_room_write(state, now)
         _save_room_state(room, state, normalized=False)
 
-    _broadcast_room_update(room)
+    _broadcast_room_update(room, change_type="add", item=item)
     response = jsonify(item)
     response.status_code = 201
     return _add_no_store_headers(response)
@@ -934,7 +943,7 @@ def add_file():
         _touch_room_write(state, now)
         _save_room_state(room, state, normalized=False)
 
-    _broadcast_room_update(room)
+    _broadcast_room_update(room, change_type="add", item=file_item)
     response = jsonify(file_item)
     response.status_code = 201
     return _add_no_store_headers(response)
@@ -966,7 +975,7 @@ def delete_item(item_id: str):
             _save_room_state(room, state, normalized=True)
 
     if changed:
-        _broadcast_room_update(room)
+        _broadcast_room_update(room, change_type="delete", item_id=item_id)
     response = jsonify({"ok": True})
     return _add_no_store_headers(response)
 
@@ -1002,7 +1011,7 @@ def clear_items():
             _save_room_state(room, state, normalized=True)
 
     if changed:
-        _broadcast_room_update(room)
+        _broadcast_room_update(room, change_type="clear")
     response = jsonify({"ok": True})
     return _add_no_store_headers(response)
 
@@ -1052,8 +1061,10 @@ def stream_items():
     _load_active_room_state(room, touch_activity=True)
 
     subscriber = _register_subscriber(room)
+    registered = True
 
     def generate():
+        nonlocal registered
         try:
             yield "retry: 1000\n\n"
 
@@ -1080,12 +1091,20 @@ def stream_items():
         except GeneratorExit:
             pass
         finally:
-            _unregister_subscriber(room, subscriber)
+            if registered:
+                registered = False
+                _unregister_subscriber(room, subscriber)
 
-    response = Response(stream_with_context(generate()), mimetype="text/event-stream")
-    response.headers["X-Accel-Buffering"] = "no"
-    response.headers["Connection"] = "keep-alive"
-    return _add_no_store_headers(response)
+    try:
+        response = Response(stream_with_context(generate()), mimetype="text/event-stream")
+        response.headers["X-Accel-Buffering"] = "no"
+        response.headers["Connection"] = "keep-alive"
+        return _add_no_store_headers(response)
+    except Exception:
+        if registered:
+            registered = False
+            _unregister_subscriber(room, subscriber)
+        raise
 
 
 @app.route("/api/qr")

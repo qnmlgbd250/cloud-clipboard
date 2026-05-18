@@ -406,7 +406,8 @@ async function loadItems(options = {}) {
   updateLoadMoreState();
   try {
     const offset = append ? currentItems.length : 0;
-    const response = await fetch(buildApiUrl("/api/items", { bust: forceFresh, params: { offset, limit: Math.max(1, limit) } }), {
+    const typeParam = currentMode === "file" ? "file" : "text";
+    const response = await fetch(buildApiUrl("/api/items", { bust: forceFresh, params: { offset, limit: Math.max(1, limit), type: typeParam } }), {
       cache: "no-store",
       headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
     });
@@ -980,7 +981,8 @@ function handleFileSelection(event) {
   const [file] = Array.from(event.target.files || []);
   if (!file) return;
   if (file.size > FILE_SIZE_LIMIT_BYTES) {
-    showToast("文件超过 500 MB 限制", "error");
+    const maxMb = Math.round(FILE_SIZE_LIMIT_BYTES / (1024 * 1024));
+    showToast(`文件超过 ${maxMb} MB 限制`, "error");
     fileInput.value = "";
     return;
   }
@@ -1040,7 +1042,39 @@ function connectRealtimeStream() {
     stopPolling();
     if (!lastSuccessfulLoadAt || Date.now() - lastSuccessfulLoadAt > POLL_INTERVAL) loadItems({ forceFresh: true, limit: getVisibleItemTarget() });
   });
-  realtimeSource.addEventListener("items_changed", () => {
+  realtimeSource.addEventListener("items_changed", (event) => {
+    let data = {};
+    try { data = JSON.parse(event.data); } catch {}
+    const changeType = data.change_type;
+
+    if (changeType === "add" && data.item) {
+      const item = data.item;
+      const matchesMode = currentMode === "file" ? item.type === "file" : item.type !== "file";
+      if (matchesMode) {
+        prependNewItem(item);
+        return;
+      }
+    }
+
+    if (changeType === "delete" && data.item_id) {
+      const idx = currentItems.findIndex(i => i.id === data.item_id);
+      if (idx !== -1) {
+        currentItems.splice(idx, 1);
+        totalItems = Math.max(0, totalItems - 1);
+        renderItems(currentItems);
+        const displayItems = getCachedDisplayItems();
+        itemCount.textContent = currentMode === "file" ? `${displayItems.length} 个文件` : `${displayItems.length} 条文本`;
+        btnClear.disabled = displayItems.length === 0;
+        syncClearConfirmState(totalItems);
+        return;
+      }
+    }
+
+    if (changeType === "clear") {
+      loadItems({ forceFresh: true, limit: getVisibleItemTarget() });
+      return;
+    }
+
     pendingItemsChanged = true;
     if (itemsChangedTimer) return;
     itemsChangedTimer = window.setTimeout(() => {
