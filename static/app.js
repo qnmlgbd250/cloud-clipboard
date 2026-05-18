@@ -1062,6 +1062,8 @@ function connectRealtimeStream() {
     if (changeType === "delete" && data.item_id) {
       const idx = currentItems.findIndex(i => i.id === data.item_id);
       if (idx !== -1) {
+        if (itemsChangedTimer) { window.clearTimeout(itemsChangedTimer); itemsChangedTimer = null; }
+        pendingItemsChanged = false;
         currentItems.splice(idx, 1);
         totalItems = Math.max(0, totalItems - 1);
         renderItems(currentItems);
