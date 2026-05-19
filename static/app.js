@@ -550,7 +550,6 @@ async function deleteItem(id, itemEl) {
     return;
   }
   try {
-    const visibleTarget = getVisibleItemTarget();
     const response = await fetch(buildApiUrl(`/api/items/${encodeURIComponent(id)}`), {
       method: "DELETE",
       cache: "no-store",
@@ -562,8 +561,9 @@ async function deleteItem(id, itemEl) {
       deleteButton.classList.remove("confirming");
       deleteButton.dataset.confirming = "false";
     }
-    // Full re-fetch to get server-sorted data, maintaining the current view size
-    loadItems({ forceFresh: true, limit: visibleTarget });
+    // SSE "delete" event handles UI update (splice + renderItems + count update).
+    // Avoid calling loadItems here — it races with the SSE handler and causes
+    // patchItemDOM to prepend an older item at the top of the list.
   } catch {
     if (deleteButton) {
       deleteButton.textContent = "删除";
