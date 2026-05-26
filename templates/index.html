@@ -55,6 +55,15 @@
             rows="6"
             autofocus
           ></textarea>
+          <div class="textarea-footer">
+            <div class="input-sync-toggle" id="inputSyncToggle" role="switch" aria-checked="true" aria-label="切换输入模式" tabindex="0" title="当前：粘贴模式（自动同步）。点击切换为打字模式。">
+              <span class="sync-toggle-track">
+                <span class="sync-toggle-thumb"></span>
+              </span>
+              <span class="sync-toggle-label" id="syncToggleLabel">自动</span>
+            </div>
+            <button class="btn-send-manual" id="btnSendManual" type="button" title="发送 (Ctrl+Enter)" hidden>发送</button>
+          </div>
         </div>
 
         <div class="input-mode-panel" id="fileComposer" hidden>

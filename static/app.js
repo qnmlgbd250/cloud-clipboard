@@ -41,6 +41,9 @@ const fileDropzone = $("#fileDropzone");
 const uploadProgress = $("#uploadProgress");
 const uploadProgressValue = $("#uploadProgressValue");
 const uploadProgressText = $("#uploadProgressText");
+const inputSyncToggle = $("#inputSyncToggle");
+const syncToggleLabel = $("#syncToggleLabel");
+const btnSendManual = $("#btnSendManual");
 
 let isLoading = false;
 let queuedLoadOptions = null;
@@ -74,6 +77,7 @@ let lastForegroundSyncAt = 0;
 let lastSuccessfulLoadAt = 0;
 let currentMode = "text";
 let autoResizeRaf = 0;
+let autoSendEnabled = true;
 
 roomBadge.textContent = ROOM_ID;
 roomBadge.title = `点击复制房间链接：${ROOM_ID}`;
@@ -94,6 +98,7 @@ function bindEvents() {
 
   inputArea.addEventListener("input", () => {
     autoResize();
+    btnSendManual.disabled = !inputArea.value.trim();
     if (!isComposing && currentMode === "text") scheduleAutoSend();
   });
   inputArea.addEventListener("compositionstart", () => {
@@ -121,6 +126,14 @@ function bindEvents() {
   });
   btnModeText.addEventListener("click", () => setMode("text"));
   btnModeFile.addEventListener("click", () => setMode("file"));
+  inputSyncToggle.addEventListener("click", toggleAutoSend);
+  inputSyncToggle.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      toggleAutoSend();
+    }
+  });
+  btnSendManual.addEventListener("click", () => sendTextItem({ successMessage: "已发送" }));
   fileInput.addEventListener("change", handleFileSelection);
   fileDropzone.addEventListener("click", (event) => {
     if (event.target instanceof HTMLElement && event.target.closest("button")) return;
@@ -229,9 +242,27 @@ function clearAutoSendTimer() {
   autoSendTimer = null;
 }
 
+function toggleAutoSend() {
+  autoSendEnabled = !autoSendEnabled;
+  inputSyncToggle.setAttribute("aria-checked", String(autoSendEnabled));
+  inputSyncToggle.title = autoSendEnabled
+    ? "当前：粘贴模式（自动同步）。点击切换为打字模式。"
+    : "当前：打字模式（手动发送）。点击切换为粘贴模式。";
+  syncToggleLabel.textContent = autoSendEnabled ? "自动" : "手动";
+  inputArea.placeholder = autoSendEnabled
+    ? "在这里粘贴内容，停止输入约 1 秒后会自动发送..."
+    : "在这里输入内容，点击发送或按 Ctrl+Enter 发送...";
+  btnSendManual.hidden = autoSendEnabled;
+  if (autoSendEnabled) {
+    if (inputArea.value.trim() && !isSending && !isComposing && currentMode === "text") scheduleAutoSend();
+  } else {
+    clearAutoSendTimer();
+  }
+}
+
 function scheduleAutoSend(delay = AUTO_SEND_DELAY) {
   clearAutoSendTimer();
-  if (currentMode !== "text" || isComposing || !inputArea.value.trim()) return;
+  if (!autoSendEnabled || currentMode !== "text" || isComposing || !inputArea.value.trim()) return;
   autoSendTimer = window.setTimeout(() => {
     autoSendTimer = null;
     sendTextItem();
@@ -461,6 +492,7 @@ async function sendTextItem({ successMessage = "已同步" } = {}) {
     if (inputArea.value.trim() === content) {
       inputArea.value = "";
       autoResize();
+      btnSendManual.disabled = true;
       if (currentMode === "text") inputArea.focus();
     }
     showToast(successMessage, "success");
