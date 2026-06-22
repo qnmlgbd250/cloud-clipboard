@@ -1013,7 +1013,7 @@ async function applyPendingPassword() {
       const data = await resp.json().catch(() => null);
       if (data?.has_password) {
         roomHasPassword = true;
-        storePassword(pending);
+        // Don't cache password - user must re-enter on delete/clear
       }
     }
   } catch {}
@@ -1094,8 +1094,8 @@ async function confirmSetPassword() {
     const data = await resp.json().catch(() => null);
     if (!resp.ok) throw new Error(data?.error || "设置失败");
     roomHasPassword = data.has_password;
-    if (newPwd) storePassword(newPwd);
-    else storePassword("");
+    // Clear cached password so user will be prompted on next delete/clear
+    storePassword("");
     setModalOpen(setPasswordModal, false);
     showToast(newPwd ? "密码已设置" : "密码已清除", "success");
   } catch (e) {
