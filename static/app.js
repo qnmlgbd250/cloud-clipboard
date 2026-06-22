@@ -91,6 +91,7 @@ setupLoadMoreObserver();
 loadQr();
 setMode("text");
 loadItems({ forceFresh: true });
+applyPendingPassword();
 startRealtimeSync();
 
 function bindEvents() {
@@ -998,6 +999,26 @@ function normalizeRoomId(value) {
   return value.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64);
 }
 
+async function applyPendingPassword() {
+  try {
+    const pending = sessionStorage.getItem("pending_room_pwd_" + ROOM_ID);
+    if (!pending) return;
+    sessionStorage.removeItem("pending_room_pwd_" + ROOM_ID);
+    const resp = await fetch(buildApiUrl("/api/room/password"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+      body: JSON.stringify({ password: pending }),
+    });
+    if (resp.ok) {
+      const data = await resp.json().catch(() => null);
+      if (data?.has_password) {
+        roomHasPassword = true;
+        storePassword(pending);
+      }
+    }
+  } catch {}
+}
+
 function getStoredPassword() {
   try { return sessionStorage.getItem("room_pwd_" + ROOM_ID) || ""; } catch { return ""; }
 }
@@ -1109,6 +1130,14 @@ function goToCustomRoom() {
     setModalOpen(newRoomModal, false);
     showToast("已经在当前房间", "success");
     return;
+  }
+  // Store password if user entered one in the new room modal
+  const roomPwd = newRoomPassword ? newRoomPassword.value.trim() : "";
+  if (roomPwd) {
+    try {
+      sessionStorage.setItem("room_pwd_" + roomId, roomPwd);
+      sessionStorage.setItem("pending_room_pwd_" + roomId, roomPwd);
+    } catch {}
   }
   window.location.href = `/r/${encodeURIComponent(roomId)}`;
 }
