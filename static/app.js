@@ -414,7 +414,14 @@ function patchItemDOM(changes) {
     const section = itemList.querySelector(".item-section");
     const content = section?.querySelector(".item-section-content");
     if (content) {
-      content.insertBefore(createItemElement(item, { animate: true }), content.firstChild);
+      // Find correct sorted position (descending by created_at)
+      const itemTime = item.created_at || "";
+      let refNode = null;
+      for (const child of content.children) {
+        const childTime = child.querySelector(".clip-time")?.dataset?.createdAt || "";
+        if (childTime < itemTime) { refNode = child; break; }
+      }
+      content.insertBefore(createItemElement(item, { animate: true }), refNode);
     } else {
       renderItems(currentItems);
     }
@@ -562,8 +569,20 @@ function prependNewItem(item) {
     queueLoad({ forceFresh: true, limit: getVisibleItemTarget() });
     return;
   }
+  const filtered = currentItems.filter((currentItem) => currentItem.id !== item.id);
+  // Insert at correct sorted position (descending by created_at) instead of always prepending
+  let insertIdx = 0;
+  const itemTime = item.created_at || "";
+  for (let i = 0; i < filtered.length; i++) {
+    if ((filtered[i].created_at || "") >= itemTime) {
+      insertIdx = i + 1;
+    } else {
+      break;
+    }
+  }
+  const merged = [...filtered.slice(0, insertIdx), item, ...filtered.slice(insertIdx)];
   const nextTotal = currentItems.some((currentItem) => currentItem.id === item.id) ? totalItems : totalItems + 1;
-  applyItems([item, ...currentItems.filter((currentItem) => currentItem.id !== item.id)].slice(0, getVisibleItemTarget()), {
+  applyItems(merged.slice(0, getVisibleItemTarget()), {
     total: Math.max(nextTotal, 1),
     hasMore: nextTotal > getVisibleItemTarget(),
   });
