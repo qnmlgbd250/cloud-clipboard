@@ -1,5 +1,6 @@
 const scriptEl = document.currentScript || document.querySelector("script[data-room]");
 const ROOM_ID = scriptEl?.dataset.room || "";
+const ROOM_HAS_PASSWORD = scriptEl?.dataset.hasPassword === "true";
 const ITEMS_PAGE_SIZE = 20;
 const POLL_INTERVAL = 5000;
 const AUTO_SEND_DELAY = 1000;
@@ -78,6 +79,9 @@ let lastSuccessfulLoadAt = 0;
 let currentMode = "text";
 let autoResizeRaf = 0;
 let autoSendEnabled = true;
+let roomHasPassword = ROOM_HAS_PASSWORD;
+let pendingPasswordResolve = null;
+let pendingPasswordAction = null;
 
 roomBadge.textContent = ROOM_ID;
 roomBadge.title = `点击复制房间链接：${ROOM_ID}`;
@@ -158,6 +162,20 @@ function bindEvents() {
   });
 
   btnCloseNewRoomModal.addEventListener("click", () => setModalOpen(newRoomModal, false));
+
+  // Password modal bindings
+  btnClosePasswordModal.addEventListener("click", cancelPasswordModal);
+  btnCancelPassword.addEventListener("click", cancelPasswordModal);
+  btnConfirmPassword.addEventListener("click", confirmPasswordModal);
+  passwordInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); confirmPasswordModal(); } });
+
+  // Set password modal bindings
+  btnCloseSetPasswordModal.addEventListener("click", () => setModalOpen(setPasswordModal, false));
+  btnCancelSetPassword.addEventListener("click", () => setModalOpen(setPasswordModal, false));
+  btnConfirmSetPassword.addEventListener("click", confirmSetPassword);
+
+  // Set password button
+  btnSetPassword.addEventListener("click", setPasswordForRoom);
   btnCreateRandomRoom.addEventListener("click", goToRandomRoom);
   btnCreateCustomRoom.addEventListener("click", goToCustomRoom);
   newRoomCustomInput.addEventListener("input", () => {
@@ -582,12 +600,26 @@ async function deleteItem(id, itemEl) {
     return;
   }
   try {
+    const delHeaders = { "Cache-Control": "no-cache" };
+    if (roomHasPassword) {
+      const pwd = await ensureRoomPassword("删除");
+      if (!pwd) { if (deleteButton) { deleteButton.textContent = "删除"; deleteButton.classList.remove("confirming"); deleteButton.dataset.confirming = "false"; } return; }
+      delHeaders["X-Room-Password"] = pwd;
+    }
     const response = await fetch(buildApiUrl(`/api/items/${encodeURIComponent(id)}`), {
       method: "DELETE",
       cache: "no-store",
-      headers: { "Cache-Control": "no-cache" },
+      headers: delHeaders,
     });
-    if (!response.ok) throw new Error("删除失败");
+    if (response.status === 403) {
+      storePassword("");
+      const pwd = await requestRoomPassword("删除");
+      if (!pwd) { if (deleteButton) { deleteButton.textContent = "删除"; deleteButton.classList.remove("confirming"); deleteButton.dataset.confirming = "false"; } return; }
+      const retryResp = await fetch(buildApiUrl(`/api/items/${encodeURIComponent(id)}`), {
+        method: "DELETE", cache: "no-store", headers: { "Cache-Control": "no-cache", "X-Room-Password": pwd },
+      });
+      if (!retryResp.ok) throw new Error("密码错误");
+    } else if (!response.ok) throw new Error("删除失败");
     if (deleteButton) {
       deleteButton.textContent = "已删除";
       deleteButton.classList.remove("confirming");
@@ -631,12 +663,26 @@ function handleClearClick() {
 
 async function doClearItems() {
   try {
+    const clearHeaders = { "Cache-Control": "no-cache" };
+    if (roomHasPassword) {
+      const pwd = await ensureRoomPassword("清空");
+      if (!pwd) { btnClear.textContent = "清空"; btnClear.disabled = false; isClearing = false; return; }
+      clearHeaders["X-Room-Password"] = pwd;
+    }
     const response = await fetch(buildApiUrl("/api/items/clear", { params: { type: currentMode } }), {
       method: "POST",
       cache: "no-store",
-      headers: { "Cache-Control": "no-cache" },
+      headers: clearHeaders,
     });
-    if (!response.ok) throw new Error("清空失败");
+    if (response.status === 403) {
+      storePassword("");
+      const pwd = await requestRoomPassword("清空");
+      if (!pwd) { btnClear.textContent = "清空"; btnClear.disabled = false; isClearing = false; return; }
+      const retryResp = await fetch(buildApiUrl("/api/items/clear", { params: { type: currentMode } }), {
+        method: "POST", cache: "no-store", headers: { "Cache-Control": "no-cache", "X-Room-Password": pwd },
+      });
+      if (!retryResp.ok) throw new Error("密码错误");
+    } else if (!response.ok) throw new Error("清空失败");
     btnClear.textContent = "已清空";
     window.setTimeout(() => {
       btnClear.textContent = "清空";
@@ -952,8 +998,93 @@ function normalizeRoomId(value) {
   return value.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64);
 }
 
+function getStoredPassword() {
+  try { return sessionStorage.getItem("room_pwd_" + ROOM_ID) || ""; } catch { return ""; }
+}
+
+function storePassword(pwd) {
+  try { if (pwd) sessionStorage.setItem("room_pwd_" + ROOM_ID, pwd); else sessionStorage.removeItem("room_pwd_" + ROOM_ID); } catch {}
+}
+
+function requestRoomPassword(action) {
+  return new Promise((resolve) => {
+    pendingPasswordResolve = resolve;
+    pendingPasswordAction = action || "";
+    passwordInput.value = "";
+    if (passwordError) { passwordError.style.display = "none"; passwordError.textContent = ""; }
+    setModalOpen(passwordModal, true);
+    passwordInput.focus();
+  });
+}
+
+function confirmPasswordModal() {
+  const pwd = passwordInput.value.trim();
+  if (!pwd) {
+    if (passwordError) { passwordError.textContent = "请输入密码"; passwordError.style.display = ""; }
+    passwordInput.focus();
+    return;
+  }
+  setModalOpen(passwordModal, false);
+  storePassword(pwd);
+  if (pendingPasswordResolve) { pendingPasswordResolve(pwd); pendingPasswordResolve = null; }
+}
+
+function cancelPasswordModal() {
+  setModalOpen(passwordModal, false);
+  if (pendingPasswordResolve) { pendingPasswordResolve(null); pendingPasswordResolve = null; }
+}
+
+async function ensureRoomPassword(action) {
+  const stored = getStoredPassword();
+  if (stored) return stored;
+  return requestRoomPassword(action);
+}
+
+async function setPasswordForRoom() {
+  if (roomHasPassword) {
+    currentPasswordGroup.style.display = "";
+    currentPasswordInput.value = "";
+  } else {
+    currentPasswordGroup.style.display = "none";
+  }
+  setPasswordInput.value = "";
+  setModalOpen(setPasswordModal, true);
+  setPasswordInput.focus();
+}
+
+async function confirmSetPassword() {
+  const newPwd = setPasswordInput.value.trim();
+  const body = { password: newPwd };
+  if (roomHasPassword) {
+    const curPwd = currentPasswordInput.value.trim();
+    if (!curPwd) {
+      showToast("请输入当前密码", "error");
+      currentPasswordInput.focus();
+      return;
+    }
+    body.current_password = curPwd;
+  }
+  try {
+    const resp = await fetch(buildApiUrl("/api/room/password"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Cache-Control": "no-cache" },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json().catch(() => null);
+    if (!resp.ok) throw new Error(data?.error || "设置失败");
+    roomHasPassword = data.has_password;
+    if (newPwd) storePassword(newPwd);
+    else storePassword("");
+    setModalOpen(setPasswordModal, false);
+    showToast(newPwd ? "密码已设置" : "密码已清除", "success");
+  } catch (e) {
+    showToast(e.message || "设置失败", "error");
+  }
+}
+
 function openNewRoomModal() {
   newRoomCustomInput.value = "";
+  if (newRoomPassword) newRoomPassword.value = "";
   setModalOpen(newRoomModal, true);
 }
 

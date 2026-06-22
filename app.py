@@ -34,6 +34,7 @@ from flask import (
     url_for,
 )
 from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
@@ -146,6 +147,14 @@ def _get_request_room() -> str | None:
     if not room or room != raw_room or not _is_valid_room_name(room):
         return None
     return room
+
+
+def _get_request_password() -> str:
+    password = request.headers.get("X-Room-Password", "")
+    if not password:
+        data = request.get_json(silent=True) or {}
+        password = str(data.get("password") or "").strip()
+    return password
 
 
 def _get_optional_int_arg(
@@ -364,11 +373,13 @@ def _normalize_room_state(room: str, raw_data: object) -> tuple[dict, bool]:
         last_activity_at = last_write_at
         changed = True
 
+    password_hash = str(raw_meta.get("password_hash") or "").strip()
     normalized = {
         "room": {
             "created_at": created_at.isoformat(),
             "last_activity_at": last_activity_at.isoformat(),
             "last_write_at": last_write_at.isoformat(),
+            "password_hash": password_hash,
         },
         "items": items,
     }
@@ -376,6 +387,7 @@ def _normalize_room_state(room: str, raw_data: object) -> tuple[dict, bool]:
     changed = changed or raw_meta.get("created_at") != normalized["room"]["created_at"]
     changed = changed or raw_meta.get("last_activity_at") != normalized["room"]["last_activity_at"]
     changed = changed or raw_meta.get("last_write_at") != normalized["room"]["last_write_at"]
+    changed = changed or raw_meta.get("password_hash") != normalized["room"]["password_hash"]
     return normalized, changed
 
 
@@ -419,6 +431,17 @@ def _room_should_expire(state: dict, now: datetime | None = None) -> bool:
     if not state.get("items") and last_activity_at <= empty_room_cutoff:
         return True
     return False
+
+
+def _room_has_password(state: dict) -> bool:
+    return bool((state.get("room") or {}).get("password_hash"))
+
+
+def _verify_room_password(state: dict, password: str) -> bool:
+    password_hash = (state.get("room") or {}).get("password_hash", "")
+    if not password_hash:
+        return True
+    return bool(password) and check_password_hash(password_hash, password)
 
 
 def _delete_room_file(room: str) -> None:
@@ -784,7 +807,8 @@ def room(room_id: str):
         response = redirect(url_for("index"))
         return _add_no_store_headers(response)
 
-    response = app.make_response(render_template("index.html", room_id=safe_room))
+    state, _ = _load_active_room_state(safe_room, touch_activity=True)
+    response = app.make_response(render_template("index.html", room_id=safe_room, room_has_password=_room_has_password(state)))
     return _add_no_store_headers(response)
 
 
@@ -963,6 +987,10 @@ def delete_item(item_id: str):
             response = jsonify({"ok": True})
             return _add_no_store_headers(response)
 
+
+        password = _get_request_password()
+        if not _verify_room_password(state, password):
+            return _json_error("????", 403)
         current_items = list(state.get("items", []))
         target_item = next((item for item in current_items if item.get("id") == item_id), None)
         items = [item for item in current_items if item.get("id") != item_id]
@@ -993,6 +1021,10 @@ def clear_items():
     room_lock = _get_room_lock(room)
     with room_lock:
         state, exists, _ = _load_room_state(room)
+        password = _get_request_password()
+        if not _verify_room_password(state, password):
+            return _json_error("????", 403)
+
         if exists and state.get("items"):
             if clear_only:
                 items_to_remove = [i for i in state.get("items", []) if i.get("type") == item_type]
@@ -1014,6 +1046,37 @@ def clear_items():
         _broadcast_room_update(room, change_type="clear")
     response = jsonify({"ok": True})
     return _add_no_store_headers(response)
+
+
+@app.route("/api/room/password", methods=["POST"])
+def set_room_password():
+    room = _get_request_room()
+    if room is None:
+        return _json_error("invalid room", 400)
+
+    data = request.get_json(silent=True) or {}
+    password = str(data.get("password") or "").strip()
+
+    room_lock = _get_room_lock(room)
+    with room_lock:
+        state, _ = _load_or_create_room(room)
+
+        # If room already has a password, verify current password first
+        if _room_has_password(state):
+            current_password = str(data.get("current_password") or "").strip()
+            if not _verify_room_password(state, current_password):
+                return _json_error("????", 403)
+
+        room_meta = state.setdefault("room", {})
+        if password:
+            room_meta["password_hash"] = generate_password_hash(password)
+        else:
+            room_meta.pop("password_hash", None)
+
+        _touch_room_write(state)
+        _save_room_state(room, state, normalized=False)
+
+    return jsonify({"ok": True, "has_password": bool(password)})
 
 
 @app.route("/api/files/<item_id>")

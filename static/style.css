@@ -1604,6 +1604,17 @@ body::-webkit-scrollbar-thumb:hover,
   }
 }
 
+#btnSetPassword {
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+#btnSetPassword:hover {
+  background: var(--surface-hover);
+}
+
 /* ============================================================
    Dark mode
    ============================================================ */

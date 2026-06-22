@@ -24,6 +24,7 @@
       <div class="titlebar-right">
         <div class="titlebar-controls">
           <button class="room-chip" id="roomBadge" type="button" title="点击复制链接"></button>
+          <button class="icon-btn" id="btnSetPassword" type="button" title="设置密码" aria-label="设置密码" style="font-size: 14px;">🔑</button>
           <button class="icon-btn new-room-btn" id="btnNewRoom" type="button" title="新建房间" aria-label="新建房间">+</button>
         </div>
       </div>
@@ -144,8 +145,76 @@
               data-modal-focus
             >
             <p class="room-custom-hint">支持字母、数字、下划线和短横线，最长 64 位。</p>
+            <div class="room-custom-group" style="margin-top: 12px;">
+              <label class="room-custom-label" for="newRoomPassword">房间密码（可选）</label>
+              <input
+                class="room-custom-input"
+                id="newRoomPassword"
+                type="password"
+                inputmode="text"
+                autocomplete="new-password"
+                maxlength="128"
+                placeholder="留空表示不设密码"
+              >
+              <p class="room-custom-hint">设置密码后，删除和清空操作需要输入密码。</p>
+            </div>
             <button class="btn btn-primary btn-block" id="btnCreateCustomRoom" type="button">进入自定义房间</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="passwordModal" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="passwordTitle">
+        <div class="modal-header">
+          <div class="modal-hero">
+            <div class="modal-hero-icon modal-hero-icon-accent">🔒</div>
+            <div class="modal-hero-copy">
+              <h3 id="passwordTitle">需要密码</h3>
+              <p class="modal-desc">此房间已设置密码，请输入密码以继续操作。</p>
+            </div>
+          </div>
+          <button class="icon-btn modal-close-btn" id="btnClosePasswordModal" type="button" title="关闭">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="room-custom-group">
+            <label class="room-custom-label" for="passwordInput">房间密码</label>
+            <input class="room-custom-input" id="passwordInput" type="password" inputmode="text" autocomplete="current-password" maxlength="128" placeholder="请输入房间密码" data-modal-focus>
+            <p class="room-custom-hint" id="passwordError" style="color: var(--danger); display: none;"></p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="btnCancelPassword" type="button">取消</button>
+          <button class="btn btn-primary" id="btnConfirmPassword" type="button">确认</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="setPasswordModal" aria-hidden="true">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="setPasswordTitle">
+        <div class="modal-header">
+          <div class="modal-hero">
+            <div class="modal-hero-icon modal-hero-icon-accent">🔑</div>
+            <div class="modal-hero-copy">
+              <h3 id="setPasswordTitle">设置房间密码</h3>
+              <p class="modal-desc">为当前房间设置密码保护。设置后，删除和清空操作需要输入密码。</p>
+            </div>
+          </div>
+          <button class="icon-btn modal-close-btn" id="btnCloseSetPasswordModal" type="button" title="关闭">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="room-custom-group">
+            <label class="room-custom-label" for="setPasswordInput">新密码</label>
+            <input class="room-custom-input" id="setPasswordInput" type="password" inputmode="text" autocomplete="new-password" maxlength="128" placeholder="输入密码（留空则清除密码）" data-modal-focus>
+          </div>
+          <div class="room-custom-group" id="currentPasswordGroup" style="display:none;">
+            <label class="room-custom-label" for="currentPasswordInput">当前密码</label>
+            <input class="room-custom-input" id="currentPasswordInput" type="password" inputmode="text" autocomplete="current-password" maxlength="128" placeholder="请输入当前密码">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" id="btnCancelSetPassword" type="button">取消</button>
+          <button class="btn btn-primary" id="btnConfirmSetPassword" type="button">保存</button>
         </div>
       </div>
     </div>
@@ -155,6 +224,6 @@
   </div>
   </div>
 
-  <script src="/static/app.js" data-room="{{ room_id }}"></script>
+  <script src="/static/app.js" data-room="{{ room_id }}" data-has-password="{{ room_has_password|lower }}"></script>
 </body>
 </html>
